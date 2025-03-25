@@ -17,7 +17,7 @@ A React Native mobile application that connects people through shared meals. Use
 
 ## Features (Project) Board
 
-Interested individuals can view the project board on [GitHub Projects](https://github.com/yourusername/MealSharing/projects/1) where we specify our functions to be implemented.
+Interested individuals can view the project board on [GitHub Projects](https://github.com/users/IvanFarfan08/projects/5) where we specify our functions to be implemented.
 
 ### Prerequisites
 
@@ -29,7 +29,7 @@ Interested individuals can view the project board on [GitHub Projects](https://g
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/MealSharing.git
+git clone https://github.com/IvanFarfan08/MealSharing.git
 cd MealSharing
 ```
 
