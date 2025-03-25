@@ -24,13 +24,13 @@ A React Native mobile application that connects people through shared meals. Use
 
 Interested individuals can view the project board on [GitHub Projects](https://github.com/users/IvanFarfan08/projects/5) where we specify our functions to be implemented.
 
-### Prerequisites
+## Prerequisites
 
 - Node.js (v14 or later)
 - npm or yarn
 - React Native development environment
 
-### Installation
+## Installation
 
 1. Clone the repository
 ```bash
