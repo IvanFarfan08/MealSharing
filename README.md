@@ -2,6 +2,11 @@
 
 A React Native mobile application that connects people through shared meals. Users can host meals or find meals hosted by others in their community. 
 
+## Technologies Used
+
+- React Native + TypeScript
+- Supabase
+
 ## Contributors & Responsabilities
 
 - **Ivan Farfan**: Authentication and database management service implementation. Created the project structure and database schema.
