@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { StyleSheet, View, Alert } from 'react-native'
-import { Button, Input } from '@rneui/themed'
+import { Button, Text } from '@rneui/themed'
+import { useNavigation } from '@react-navigation/native'
 import { Session } from '@supabase/supabase-js'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import type { RootStackParamList } from './Auth'
 
 export default function Account({ session }: { session: Session }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Account'>>()
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
-  const [website, setWebsite] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
 
   useEffect(() => {
@@ -30,7 +33,6 @@ export default function Account({ session }: { session: Session }) {
 
       if (data) {
         setUsername(data.username)
-        setWebsite(data.website)
         setAvatarUrl(data.avatar_url)
       }
     } catch (error) {
@@ -44,11 +46,9 @@ export default function Account({ session }: { session: Session }) {
 
   async function updateProfile({
     username,
-    website,
     avatar_url,
   }: {
     username: string
-    website: string
     avatar_url: string
   }) {
     try {
@@ -58,7 +58,6 @@ export default function Account({ session }: { session: Session }) {
       const updates = {
         id: session?.user.id,
         username,
-        website,
         avatar_url,
         updated_at: new Date(),
       }
@@ -79,7 +78,7 @@ export default function Account({ session }: { session: Session }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
+      {/* <View style={[styles.verticallySpaced, styles.mt20]}>
         <Input label="Email" value={session?.user?.email} disabled />
       </View>
       <View style={styles.verticallySpaced}>
@@ -95,19 +94,31 @@ export default function Account({ session }: { session: Session }) {
           onPress={() => updateProfile({ username, website, avatar_url: avatarUrl })}
           disabled={loading}
         />
+      </View> */}
+
+      <View>
+        <Text h3>Welcome {username || 'User'}!</Text>
       </View>
 
-      <View style={styles.verticallySpaced}>
-        <Button title="Sign Out" onPress={() => supabase.auth.signOut()} />
+      <View style={{flex:2, flexDirection:'row', justifyContent:'space-between', padding:10, top:250}}>
+      <Button title="Host Meal" icon={{ type: 'font-awesome', name: 'cutlery', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => navigation.navigate('HostMeal')} />
+    <Button title="Find Meals" icon={{ type: 'font-awesome', name: 'location-arrow', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => navigation.navigate('FindMeals')} />
+  <Button title="Sign Out" icon={{ type: 'font-awesome', name: 'sign-out', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => supabase.auth.signOut()} />
       </View>
+      
+      {/* <View style={styles.verticallySpaced}>
+        <Button title="Sign Out" onPress={() => supabase.auth.signOut()} />
+      </View> */}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 40,
+    marginTop: 20,
     padding: 12,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   verticallySpaced: {
     paddingTop: 4,

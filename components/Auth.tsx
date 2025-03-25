@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Alert, StyleSheet, View, AppState } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { Button, Input } from '@rneui/themed'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -15,7 +17,18 @@ AppState.addEventListener('change', (state) => {
   }
 })
 
+export type RootStackParamList = {
+  Auth: undefined;
+  SignUp: undefined;
+  Account: undefined;
+  FindMeals: undefined;
+  HostMeal: undefined;
+}
+
+type AuthScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Auth'>
+
 export default function Auth() {
+  const navigation = useNavigation<AuthScreenNavigationProp>()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -31,19 +44,8 @@ export default function Auth() {
     setLoading(false)
   }
 
-  async function signUpWithEmail() {
-    setLoading(true)
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    })
-
-    if (error) Alert.alert(error.message)
-    if (!session) Alert.alert('Please check your inbox for email verification!')
-    setLoading(false)
+  function goToSignUp() {
+    navigation.navigate('SignUp')
   }
 
   return (
@@ -73,7 +75,7 @@ export default function Auth() {
         <Button title="Sign in" disabled={loading} onPress={() => signInWithEmail()} />
       </View>
       <View style={styles.verticallySpaced}>
-        <Button title="Sign up" disabled={loading} onPress={() => signUpWithEmail()} />
+        <Button title="Sign up" type="outline" onPress={goToSignUp} />
       </View>
     </View>
   )
