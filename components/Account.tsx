@@ -1,131 +1,98 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { StyleSheet, View, Alert } from 'react-native'
-import { Button, Text } from '@rneui/themed'
-import { useNavigation } from '@react-navigation/native'
+import { StyleSheet, View, ScrollView, Alert } from 'react-native'
+import { Text, Button } from '@rneui/themed'
 import { Session } from '@supabase/supabase-js'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { RootStackParamList } from '../App'  
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { supabase } from '../lib/supabase'
+import LottieView from 'lottie-react-native'
 
 export default function Account({ session }: { session: Session }) {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Account'>>()
-  const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState('')
 
   useEffect(() => {
-    if (session) getProfile()
+    if (session?.user) getProfile()
   }, [session])
 
   async function getProfile() {
-    try {
-      setLoading(true)
-      if (!session?.user) throw new Error('No user on the session!')
+    const { data } = await supabase
+      .from('profiles')
+      .select(`username`)
+      .eq('id', session.user.id)
+      .single()
 
-      const { data, error, status } = await supabase
-        .from('profiles')
-        .select(`username, website, avatar_url`)
-        .eq('id', session.user.id)
-        .single()
-      if (error && status !== 406) {
-        throw error
-      }
-
-      if (data) {
-        setUsername(data.username)
-        setAvatarUrl(data.avatar_url)
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message)
-      }
-    } finally {
-      setLoading(false)
-    }
+    if (data) setUsername(data.username)
   }
 
-  async function updateProfile({
-    username,
-    avatar_url,
-  }: {
-    username: string
-    avatar_url: string
-  }) {
-    try {
-      setLoading(true)
-      if (!session?.user) throw new Error('No user on the session!')
-
-      const updates = {
-        id: session.user.id,
-        username,
-        avatar_url,
-        updated_at: new Date(),
-      }
-
-      const { error } = await supabase.from('profiles').upsert(updates)
-
-      if (error) throw error
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message)
-      }
-    } finally {
-      setLoading(false)
-    }
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut()
+    if (error) Alert.alert('Error signing out', error.message)
   }
 
   return (
-    <View style={styles.container}>
-      <View>
-        <Text h3>Welcome {username || 'User'}!</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Account Settings</Text>
 
-      <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'space-between', padding: 10, top: 250 }}>
+        <View style={styles.infoSection}>
+          <Text style={styles.label}>Username:</Text>
+          <Text style={styles.value}>{username}</Text>
+
+          <Text style={styles.label}>Email:</Text>
+          <Text style={styles.value}>{session.user.email}</Text>
+
+          <Text style={styles.label}>User ID:</Text>
+          <Text style={styles.value}>{session.user.id}</Text>
+        </View>
+
         <Button
-          title="Host Meal"
-          icon={{ type: 'font-awesome', name: 'cutlery', color: '#2089dc' }}
-          iconContainerStyle={{ padding: 8 }}
-          iconPosition="top"
-          type="outline"
-          buttonStyle={{ borderRadius: 5, height: 100 }}
-          onPress={() => navigation.navigate('HostMeal')}
+          title="Log Out"
+          onPress={handleSignOut}
+          buttonStyle={styles.logoutButton}
         />
-        <Button
-          title="Find Meals"
-          icon={{ type: 'font-awesome', name: 'location-arrow', color: '#2089dc' }}
-          iconContainerStyle={{ padding: 8 }}
-          iconPosition="top"
-          type="outline"
-          buttonStyle={{ borderRadius: 5, height: 100 }}
-          onPress={() => navigation.navigate('FindMeals')}
+
+        <LottieView
+          source={require('../assets/animations/Animation3.json')}
+          autoPlay
+          loop
+          style={{ width: '100%', height: 400, marginTop: 10 }}
         />
-        <Button
-          title="Sign Out"
-          icon={{ type: 'font-awesome', name: 'sign-out', color: '#2089dc' }}
-          iconContainerStyle={{ padding: 8 }}
-          iconPosition="top"
-          type="outline"
-          buttonStyle={{ borderRadius: 5, height: 100 }}
-          onPress={() => supabase.auth.signOut()}
-        />
-      </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
-    padding: 12,
     flex: 1,
-    justifyContent: 'space-between',
+    backgroundColor: '#FFF3E0',
   },
-  verticallySpaced: {
-    paddingTop: 4,
-    paddingBottom: 4,
-    alignSelf: 'stretch',
+  content: {
+    padding: 24,
   },
-  mt20: {
-    marginTop: 20,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  infoSection: {
+    marginBottom: 40,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginTop: 12,
+  },
+  value: {
+    fontSize: 16,
+    color: '#333',
+  },
+  logoutButton: {
+    backgroundColor: '#ffb31a',
+    borderRadius: 30,
+    paddingVertical: 12,
+    marginTop: 10,
   },
 })

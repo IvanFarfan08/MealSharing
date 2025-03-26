@@ -19,27 +19,29 @@ export default function NameScreen() {
 
   async function handleSignUp() {
     setLoading(true)
-  
+
+    const fullName = `${firstName} ${lastName}`.trim()
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          first_name: firstName,
-          last_name: lastName,
+          username: email,//Email is the username for profiles and is stored as username in database
+          full_name: fullName,   
         },
       },
     })
-  
+
     if (error) {
       Alert.alert('Sign up error', error.message)
+    } else {
+      Alert.alert('Success', 'Account created! Check your email if verification is required.')
+      navigation.navigate('LoginScreen')
     }
-  
-    setLoading(false)
 
+    setLoading(false)
   }
-  
-  
 
   return (
     <View style={styles.container}>

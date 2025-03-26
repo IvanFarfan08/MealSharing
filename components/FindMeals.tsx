@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native'
 import { Text, Button } from '@rneui/themed'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { RootStackParamList } from './Welcome'
+import type { RootStackParamList } from '../App'
 
 export default function FindMeals() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'FindMeals'>>()
