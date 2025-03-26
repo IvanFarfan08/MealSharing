@@ -11,12 +11,10 @@ export default function SignUp() {
 
   async function signUpWithEmail() {
     setLoading(true)
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signUp({
-      email: email,
-      password: password,
+
+    const { data: { session }, error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
         data: {
           username: userName,
@@ -24,62 +22,59 @@ export default function SignUp() {
       },
     })
 
-    if (error) Alert.alert(error.message)
-    if (!session) Alert.alert('No Session Error')
+    if (error) Alert.alert('Sign up error', error.message)
+    else if (!session) Alert.alert('Check your email to confirm your sign up.')
     setLoading(false)
   }
 
   return (
     <View style={styles.container}>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Input
-          label="Username"
-          leftIcon={{ type: 'font-awesome', name: 'user' }}
-          onChangeText={(text) => setUserName(text)}
-          value={userName}
-          placeholder="Username"
-          autoCapitalize={'none'}
-        />
-      </View>
-      <View style={[styles.verticallySpaced]}>
-        <Input
-          label="Email"
-          leftIcon={{ type: 'font-awesome', name: 'envelope' }}
-          onChangeText={(text) => setEmail(text)}
-          value={email}
-          placeholder="email@address.com"
-          autoCapitalize={'none'}
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Password"
-          leftIcon={{ type: 'font-awesome', name: 'lock' }}
-          onChangeText={(text) => setPassword(text)}
-          value={password}
-          secureTextEntry={true}
-          placeholder="Password"
-          autoCapitalize={'none'}
-        />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button title="Sign up" disabled={loading} onPress={() => signUpWithEmail()} />
-      </View>
+      <Text style={styles.heading}>What's your email address?</Text>
+      <Text style={styles.heading}>This will be used to sign in again</Text>
+
+      <Input
+        placeholder="Email"
+        leftIcon={{ type: 'font-awesome', name: 'envelope' }}
+        onChangeText={setEmail}
+        value={email}
+        autoCapitalize="none"
+      />
+      <Input
+        placeholder="Password"
+        leftIcon={{ type: 'font-awesome', name: 'lock' }}
+        onChangeText={setPassword}
+        value={password}
+        secureTextEntry
+        autoCapitalize="none"
+      />
+      <Button title="Sign Up" onPress={signUpWithEmail} disabled={loading} />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-    container: {
-      marginTop: 40,
-      padding: 12,
-    },
-    verticallySpaced: {
-      paddingTop: 4,
-      paddingBottom: 4,
-      alignSelf: 'stretch',
-    },
-    mt20: {
-      marginTop: 20,
-    },
-  })
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#ffb31a',
+    paddingVertical: 14,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    marginBottom: 16,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+})

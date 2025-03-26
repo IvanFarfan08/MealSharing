@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { StyleSheet, View, Alert } from 'react-native'
 import { Button, Text } from '@rneui/themed'
 import { useNavigation } from '@react-navigation/native'
 import { Session } from '@supabase/supabase-js'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { RootStackParamList } from './Auth'
+import type { RootStackParamList } from '../App'  
 
 export default function Account({ session }: { session: Session }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Account'>>()
@@ -25,7 +25,7 @@ export default function Account({ session }: { session: Session }) {
       const { data, error, status } = await supabase
         .from('profiles')
         .select(`username, website, avatar_url`)
-        .eq('id', session?.user.id)
+        .eq('id', session.user.id)
         .single()
       if (error && status !== 406) {
         throw error
@@ -56,7 +56,7 @@ export default function Account({ session }: { session: Session }) {
       if (!session?.user) throw new Error('No user on the session!')
 
       const updates = {
-        id: session?.user.id,
+        id: session.user.id,
         username,
         avatar_url,
         updated_at: new Date(),
@@ -64,9 +64,7 @@ export default function Account({ session }: { session: Session }) {
 
       const { error } = await supabase.from('profiles').upsert(updates)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert(error.message)
@@ -78,37 +76,39 @@ export default function Account({ session }: { session: Session }) {
 
   return (
     <View style={styles.container}>
-      {/* <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Input label="Email" value={session?.user?.email} disabled />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input label="Username" value={username || ''} onChangeText={(text) => setUsername(text)} />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input label="Website" value={website || ''} onChangeText={(text) => setWebsite(text)} />
-      </View>
-
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button
-          title={loading ? 'Loading ...' : 'Update'}
-          onPress={() => updateProfile({ username, website, avatar_url: avatarUrl })}
-          disabled={loading}
-        />
-      </View> */}
-
       <View>
         <Text h3>Welcome {username || 'User'}!</Text>
       </View>
 
-      <View style={{flex:2, flexDirection:'row', justifyContent:'space-between', padding:10, top:250}}>
-      <Button title="Host Meal" icon={{ type: 'font-awesome', name: 'cutlery', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => navigation.navigate('HostMeal')} />
-    <Button title="Find Meals" icon={{ type: 'font-awesome', name: 'location-arrow', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => navigation.navigate('FindMeals')} />
-  <Button title="Sign Out" icon={{ type: 'font-awesome', name: 'sign-out', color:'#2089dc'}} iconContainerStyle={{padding: 8}} iconPosition="top" type="outline" buttonStyle={{borderRadius: 5, height: 100}} onPress={() => supabase.auth.signOut()} />
+      <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'space-between', padding: 10, top: 250 }}>
+        <Button
+          title="Host Meal"
+          icon={{ type: 'font-awesome', name: 'cutlery', color: '#2089dc' }}
+          iconContainerStyle={{ padding: 8 }}
+          iconPosition="top"
+          type="outline"
+          buttonStyle={{ borderRadius: 5, height: 100 }}
+          onPress={() => navigation.navigate('HostMeal')}
+        />
+        <Button
+          title="Find Meals"
+          icon={{ type: 'font-awesome', name: 'location-arrow', color: '#2089dc' }}
+          iconContainerStyle={{ padding: 8 }}
+          iconPosition="top"
+          type="outline"
+          buttonStyle={{ borderRadius: 5, height: 100 }}
+          onPress={() => navigation.navigate('FindMeals')}
+        />
+        <Button
+          title="Sign Out"
+          icon={{ type: 'font-awesome', name: 'sign-out', color: '#2089dc' }}
+          iconContainerStyle={{ padding: 8 }}
+          iconPosition="top"
+          type="outline"
+          buttonStyle={{ borderRadius: 5, height: 100 }}
+          onPress={() => supabase.auth.signOut()}
+        />
       </View>
-      
-      {/* <View style={styles.verticallySpaced}>
-        <Button title="Sign Out" onPress={() => supabase.auth.signOut()} />
-      </View> */}
     </View>
   )
 }
