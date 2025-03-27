@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { View, StyleSheet, Alert, Modal, ScrollView, TouchableOpacity } from 'react-native'
-import { Text, Button, Card } from '@rneui/themed'
+import { Text, Button, Card, Image } from '@rneui/themed'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../App'
@@ -45,6 +45,10 @@ export default function FindMeals({ session }: { session: Session }) {
     setModalVisible(false)
   }
 
+  const handleUpdateMealList = () => {
+    fetchMeals()
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={{ paddingTop: 40 }}>
@@ -57,6 +61,7 @@ export default function FindMeals({ session }: { session: Session }) {
             <TouchableOpacity key={meal.id} onPress={() => handleMealSelect(meal)}>
               <Card containerStyle={styles.card}>
                 <Text h4>{meal.name}</Text>
+                <Image source={{ uri: meal.image_url }} style={styles.image} />
                 <Text>{`Location: ${meal.location}`}</Text>
                 <Text>{`Price: $${meal.price}`}</Text>
                 <Button title="Join Meal" onPress={() => handleMealSelect(meal)} buttonStyle={styles.joinButton} />
@@ -64,6 +69,8 @@ export default function FindMeals({ session }: { session: Session }) {
             </TouchableOpacity>
           ))}
         </View>
+        <Text style={styles.heading} onPress={() => handleUpdateMealList()}>Update Meal List</Text>
+        
 
         {/* Modal to show selected meal details */}
         <Modal
@@ -76,6 +83,7 @@ export default function FindMeals({ session }: { session: Session }) {
             {selectedMeal && (
               <Card>
                 <Text h3>{selectedMeal.name}</Text>
+                <Image source={{ uri: selectedMeal.image_url }} style={styles.image} />   
                 <Text>{`Location: ${selectedMeal.location}`}</Text>
                 <Text>{`Price: $${selectedMeal.price}`}</Text>
                 <Text>{`Max Guests: ${selectedMeal.max_guests}`}</Text>
@@ -95,15 +103,6 @@ export default function FindMeals({ session }: { session: Session }) {
             )}
           </View>
         </Modal>
-
-        {/* Go Back Button */}
-        <View style={styles.buttonContainer}>
-          <Button 
-            title="Go Back" 
-            onPress={() => navigation.goBack()} 
-            type="outline"
-          />
-        </View>
       </View>
     </ScrollView>
   )
@@ -121,21 +120,28 @@ const styles = StyleSheet.create({
     color: '#ffb31a',
   },
   subtitle: {
-    fontSize: 18, // Increased font size for better readability
-    fontWeight: '600', // Semi-bold font for emphasis
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 20,
-    color: '#444', // Dark gray for better contrast against the background
+    color: '#444',
   },
   mealsContainer: {
     marginBottom: 20,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginVertical: 10,
+    resizeMode: 'cover',
   },
   card: {
     marginBottom: 20,
     backgroundColor: '#fff',
     borderRadius: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },
