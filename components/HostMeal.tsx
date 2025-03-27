@@ -14,18 +14,91 @@ export default function HostMeal({ session }: { session: Session }) {
   const [price, setPrice] = useState('')
   const [mealDate, setMealDate] = useState(new Date())
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const [courses, setCourses] = useState([{ name: '', ingredients: '' }])
   const [image, setImage] = useState<string | null>(null)
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    })
+  const handleImageUpload = async (uri: string) => {
+    try {
+      setUploading(true)
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri)
+      // Create a unique filename
+      const fileName = `${session.user.id}_${Date.now()}.jpg`
+
+      // Create FormData
+      const formData = new FormData()
+      formData.append('file', {
+        uri: uri,
+        name: fileName,
+        type: 'image/jpeg'
+      } as any)
+
+      // Upload directly to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, formData, {
+          contentType: 'multipart/form-data',
+          upsert: true
+        })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      // Make direct request to upload
+      const uploadResponse = await fetch(uri, {
+        method: 'PUT',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed')
+      }
+
+      // Get the public URL
+      const { data: url } = await supabase.storage
+        .from('images')
+        .getPublicUrl(fileName)
+
+      setImage(url.publicUrl)
+    } catch (error) {
+      console.error('Error:', error)
+      Alert.alert('Error', (error as Error)?.message || 'Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+  
+  const pickImage = async () => {
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images.')
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: true,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        // Show local image immediately for better UX
+        setImage(result.assets[0].uri)
+        
+        // Upload the image
+        await handleImageUpload(result.assets[0].uri)
+      }
+    } catch (e) {
+      console.error('Image picker error:', e)
+      Alert.alert('Error', 'Failed to pick image')
     }
   }
 
