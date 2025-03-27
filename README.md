@@ -12,7 +12,7 @@ A React Native mobile application that connects people through shared meals. Use
 - **Ivan Farfan**: Authentication and database management service implementation. Created the project structure and database schema.
 - **Johan Jaramillo**: [Contributor Responsibilities]
 - **Ryan Davis**: [Contributor Responsibilities]
-- **Cory Vitanza**: [Contributor Responsibilities]
+- **Cory Vitanza**: Updated the "Find Meals" page layout and functionality. Implemented bugfixes for misc errors/bugs.
 
 ## Features
 
