@@ -23,7 +23,7 @@ export default function MainTabs({ session }: { session: Session }) {
       {/* Make FindMeals first/home tab */}
       <Tab.Screen
         name="Find"
-        component={FindMeals}
+        children={() => <FindMeals session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Icon name="map-marker" type="font-awesome" color={color} size={size} />
