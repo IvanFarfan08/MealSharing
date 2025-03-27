@@ -1,19 +1,28 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
-import Auth from './components/Auth'
-import Account from './components/Account'
 import { Session } from '@supabase/supabase-js'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import SignUp from './components/SignUp'
-import FindMeals from './components/FindMeals'
-import HostMeal from './components/HostMeal'
-import { Elements } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 
-const Stack = createNativeStackNavigator()
+// Screens
+import Welcome from './components/Welcome'
+import LoginScreen from './components/LogInScreen'
+import EmailScreen from './components/EmailScreen'
+import PasswordScreen from './components/PasswordScreen'
+import NameScreen from './components/NameScreen'
+import MainTabs from './components/Tabs' // Bottom tab navigator
 
-const stripePromise = loadStripe('pk_test_51R73KlQdLCvMgvw4tFMxS406PkgHFAvcSORcYy6oe3PxDOLut24VarpCDU7E9YDoGoEPoGJ1aK9Bu2ECSQe8zit500Qk3kB3Ba')
+export type RootStackParamList = {
+  Welcome: undefined;
+  LoginScreen: undefined;
+  EmailScreen: undefined;
+  PasswordScreen: { email: string };
+  NameScreen: { email: string; password: string };
+  MainTabs: undefined;
+  FindMeals: undefined;
+}
+
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -23,31 +32,34 @@ export default function App() {
       setSession(session)
     })
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
+
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
   }, [])
 
   return (
-    <Elements stripe={stripePromise}>
-      <NavigationContainer>
-        <Stack.Navigator>
-          {session && session.user ? (
-            <>
-              <Stack.Screen name="Account">
-                {(props) => <Account {...props} session={session} />}
-              </Stack.Screen>
-              <Stack.Screen name="FindMeals" component={FindMeals} />
-              <Stack.Screen name="HostMeal" component={HostMeal} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={Auth} />
-              <Stack.Screen name="SignUp" component={SignUp} />
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </Elements>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {session && session.user ? (
+          <>
+            <Stack.Screen name="MainTabs">
+              {() => <MainTabs session={session} />}
+            </Stack.Screen>
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Welcome" component={Welcome} />
+            <Stack.Screen name="LoginScreen" component={LoginScreen} />
+            <Stack.Screen name="EmailScreen" component={EmailScreen} />
+            <Stack.Screen name="PasswordScreen" component={PasswordScreen} />
+            <Stack.Screen name="NameScreen" component={NameScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   )
 }
