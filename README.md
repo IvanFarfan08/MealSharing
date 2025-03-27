@@ -10,7 +10,7 @@ A React Native mobile application that connects people through shared meals. Use
 ## Contributors & Responsabilities
 
 - **Ivan Farfan**: Authentication and database management service implementation. Created the project structure and database schema.
-- **Johan Jaramillo**: [Contributor Responsibilities]
+- **Johan Jaramillo**: Improved the log in and account creation UI, including the addition of smooth transitions and Lottie animations. Designed and implemented the "Host a Meal" feature, enabling users to create and publish meal events with full details such as location, date, courses, and pricing.
 - **Ryan Davis**: [Contributor Responsibilities]
 - **Cory Vitanza**: Updated the "Find Meals" page layout and functionality. Implemented bugfixes for misc errors/bugs.
 
