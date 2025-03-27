@@ -84,7 +84,7 @@ export default function HostMeal({ session }: { session: Session }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 1,
         allowsEditing: true,
       })
