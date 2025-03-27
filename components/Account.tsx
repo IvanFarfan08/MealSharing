@@ -50,12 +50,15 @@ export default function Account({ session }: { session: Session }) {
           buttonStyle={styles.logoutButton}
         />
 
-        <LottieView
-          source={require('../assets/animations/Animation3.json')}
-          autoPlay
-          loop
-          style={{ width: '100%', height: 400, marginTop: 10 }}
-        />
+        {/* Wrapped LottieView in a fixed container */}
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={require('../assets/animations/Animation3.json')}
+            autoPlay
+            loop
+            style={styles.lottie}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -94,5 +97,16 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingVertical: 12,
     marginTop: 10,
+  },
+  lottieContainer: {
+    width: '100%',
+    height: 400,
+    alignItems: 'center', // Centers animation
+    justifyContent: 'center',
+    overflow: 'hidden', // Prevents uncontrolled expansion
+  },
+  lottie: {
+    width: '100%', 
+    height: '100%',
   },
 })

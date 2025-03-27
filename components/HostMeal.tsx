@@ -119,12 +119,15 @@ export default function HostMeal({ session }: { session: Session }) {
         />
         {image && <Image source={{ uri: image }} style={styles.image} />}
 
-        <LottieView
-          source={require('../assets/animations/Animation2.json')}
-          autoPlay
-          loop
-          style={{ width: '100%', height: 180, marginBottom: 10 }}
-        />
+        {/* Wrapped LottieView in a fixed container */}
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={require('../assets/animations/Animation2.json')}
+            autoPlay
+            loop
+            style={styles.lottie}
+          />
+        </View>
 
         <Text h4 style={styles.subheading}>Courses</Text>
         {courses.map((course, index) => (
@@ -200,5 +203,17 @@ const styles = StyleSheet.create({
     height: 200,
     marginVertical: 10,
     borderRadius: 10,
+  },
+  // New container for LottieView
+  lottieContainer: {
+    width: '100%',
+    height: 180,
+    alignItems: 'center', // Centers the LottieView
+    justifyContent: 'center',
+    overflow: 'hidden', // Prevents expansion
+  },
+  lottie: {
+    width: '100%',
+    height: '100%',
   },
 })
