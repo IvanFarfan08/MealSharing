@@ -17,13 +17,15 @@ export default function Welcome() {
         <Text style={styles.heading}>Welcome to MealSharing</Text>
         <Text style={styles.subheading}>A platform where you exchange flavors and stories</Text>
 
-        {/* Lottie Animation */}
-        <LottieView
-          source={require('../assets/animations/Animation1.json')}
-          autoPlay
-          loop
-          style={styles.lottie}
-        />
+        {/* Lottie Animation - Wrapped in a fixed View */}
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={require('../assets/animations/Animation1.json')}
+            autoPlay
+            loop
+            style={styles.lottie}
+          />
+        </View>
       </View>
 
       {/* Custom Buttons */}
@@ -70,9 +72,15 @@ const styles = StyleSheet.create({
     color: '#ffb31a',
     marginBottom: 20,
   },
+  // Wrapped Lottie in a fixed container to prevent size overflow
+  lottieContainer: {
+    width: 300,
+    height: 300,
+    alignSelf: 'center',
+    overflow: 'hidden', // Prevents unwanted resizing
+  },
   lottie: {
-    width: 350,
-    height: 350,
+    flex: 1, // Ensures it scales within the container
   },
   buttonSection: {
     marginBottom: 80,
