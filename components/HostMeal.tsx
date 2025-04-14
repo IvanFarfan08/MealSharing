@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { View, StyleSheet, ScrollView, Alert, Image, TouchableOpacity } from 'react-native'
+import { View, StyleSheet, ScrollView, Alert, Image, TouchableOpacity, Modal, Dimensions } from 'react-native'
 import { Input, Button, Text, Icon } from '@rneui/themed'
+import MapView, { Marker } from 'react-native-maps'
 import { supabase } from '../lib/supabase'
 import { Session } from '@supabase/supabase-js'
 import * as ImagePicker from 'expo-image-picker'
@@ -9,7 +10,8 @@ import LottieView from 'lottie-react-native'
 
 export default function HostMeal({ session }: { session: Session }) {
   const [name, setName] = useState('')
-  const [location, setLocation] = useState('')
+  const [location, setLocation] = useState({longitude: -122.4324, latitude: 37.78825})
+  const [mapVisible, setMapVisible] = useState(false)
   const [maxGuests, setMaxGuests] = useState('')
   const [price, setPrice] = useState('')
   const [mealDate, setMealDate] = useState(new Date())
@@ -129,7 +131,7 @@ export default function HostMeal({ session }: { session: Session }) {
 
     const { error } = await supabase.from('meals').insert([{
       name,
-      location,
+      location: [location], // Convert to array for JSONB[] database column
       max_guests: parseInt(maxGuests),
       price: parseFloat(price),
       meal_date: mealDate.toISOString(),
@@ -145,7 +147,7 @@ export default function HostMeal({ session }: { session: Session }) {
     } else {
       Alert.alert('Success', 'Meal created successfully!')
       setName('')
-      setLocation('')
+      setLocation({ longitude: -122.4324, latitude: 37.78825 })
       setMaxGuests('')
       setPrice('')
       setImage(null)
@@ -160,7 +162,86 @@ export default function HostMeal({ session }: { session: Session }) {
         <Text h3 style={styles.heading}>Host a Meal</Text>
 
         <Input placeholder="Meal Name" value={name} onChangeText={setName} />
-        <Input placeholder="Location" value={location} onChangeText={setLocation} />
+        <View>
+          <Text style={styles.subheading}>Location</Text>
+          <TouchableOpacity
+            style={styles.mapContainer}
+            onPress={() => setMapVisible(true)}
+          >
+            <MapView
+              style={styles.miniMap}
+              initialRegion={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              <Marker
+                coordinate={{
+                  latitude: location.latitude,
+                  longitude: location.longitude
+                }}
+              />
+            </MapView>
+            <View style={styles.mapOverlay}>
+              <Icon name="map-marker" type="font-awesome" color="#ffb31a" size={24} />
+              <Text style={styles.tapToEditText}>Tap to set location</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <Modal
+            visible={mapVisible}
+            transparent={false}
+            animationType="slide"
+            onRequestClose={() => setMapVisible(false)}
+          >
+            <View style={[styles.container]}>
+              <View style={styles.mapHeader}>
+                <Text style={styles.mapTitle}>Set Meal Location</Text>
+                <TouchableOpacity onPress={() => setMapVisible(false)} style={styles.closeButton}>
+                  <Icon name="close" type="material" color="#ffb31a" />
+                </TouchableOpacity>
+              </View>
+              
+              <MapView
+                style={styles.fullMap}
+                initialRegion={{
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+                onPress={(e) => {
+                  setLocation(e.nativeEvent.coordinate);
+                }}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: location.latitude,
+                    longitude: location.longitude
+                  }}
+                  draggable
+                  onDragEnd={(e) => {
+                    setLocation(e.nativeEvent.coordinate);
+                  }}
+                />
+              </MapView>
+              
+              <View style={styles.mapButtonContainer}>
+                <Button 
+                  title="Use This Location" 
+                  onPress={() => setMapVisible(false)}
+                  buttonStyle={styles.mapButton}
+                />
+              </View>
+            </View>
+          </Modal>
+        </View>
         <Input placeholder="Max Guests" keyboardType="numeric" value={maxGuests} onChangeText={(text) => setMaxGuests(text.replace(/[^0-9]/g, ''))} />
         <Input placeholder="Price (e.g. 9.99)" keyboardType="decimal-pad" value={price} onChangeText={(text) => setPrice(text.replace(/[^0-9.]/g, ''))} />
 
@@ -271,6 +352,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingVertical: 12,
   },
+  mapButton: {
+    backgroundColor: "#ffb31a",
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+  },
+  mapButtonContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 1000,
+  },
   image: {
     width: '100%',
     height: 200,
@@ -288,5 +384,57 @@ const styles = StyleSheet.create({
   lottie: {
     width: '100%',
     height: '100%',
+  },
+  // Map related styles
+  mapContainer: {
+    height: 150,
+    marginBottom: 15,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  miniMap: {
+    width: '100%',
+    height: '100%',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tapToEditText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  fullMap: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    paddingTop: 60,
+    backgroundColor: '#FFF3E0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffb31a',
+  },
+  mapTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#444',
+  },
+  closeButton: {
+    padding: 8,
   },
 })
