@@ -8,9 +8,22 @@ import * as ImagePicker from 'expo-image-picker'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import LottieView from 'lottie-react-native'
 
-export default function HostMeal({ session }: { session: Session }) {
+interface HostMealProps {
+  session: Session;
+  userLocation: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  };
+}
+
+export default function HostMeal({ session, userLocation }: HostMealProps) {
   const [name, setName] = useState('')
-  const [location, setLocation] = useState({longitude: -122.4324, latitude: 37.78825})
+  const [location, setLocation] = useState({
+    longitude: userLocation.longitude,
+    latitude: userLocation.latitude
+  })
   const [mapVisible, setMapVisible] = useState(false)
   const [maxGuests, setMaxGuests] = useState('')
   const [price, setPrice] = useState('')
@@ -147,7 +160,10 @@ export default function HostMeal({ session }: { session: Session }) {
     } else {
       Alert.alert('Success', 'Meal created successfully!')
       setName('')
-      setLocation({ longitude: -122.4324, latitude: 37.78825 })
+      setLocation({
+        longitude: userLocation.longitude,
+        latitude: userLocation.latitude
+      })
       setMaxGuests('')
       setPrice('')
       setImage(null)
