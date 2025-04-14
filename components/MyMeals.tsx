@@ -1,5 +1,15 @@
+//account.tsx 
 import React, { useState, useCallback } from 'react'
-import {View, StyleSheet, ScrollView, Alert, Image, Modal, TextInput, TouchableOpacity,} from 'react-native'
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Image,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native'
 import { Text, Card, Button } from '@rneui/themed'
 import { supabase } from '../lib/supabase'
 import { Session } from '@supabase/supabase-js'
@@ -12,33 +22,49 @@ export default function MyMeals({ session }: { session: Session }) {
   const [selectedMeal, setSelectedMeal] = useState<any | null>(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [reviewModalVisible, setReviewModalVisible] = useState(false)
+  const [currentRevieweeId, setCurrentRevieweeId] = useState('')
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [mealToReview, setMealToReview] = useState<any | null>(null)
+  const [pastHostedMeals, setPastHostedMeals] = useState<any[]>([])
+  const [pastJoinedMeals, setPastJoinedMeals] = useState<any[]>([])
+  const [guestInfo, setGuestInfo] = useState<any>({})
+
 
   const fetchMyMeals = async () => {
     const userId = session.user.id
-
-    const { data: hosted, error: hostedError } = await supabase
+    const now = Date.now()
+  
+    const { data: hosted } = await supabase
       .from('meals')
       .select('*')
       .eq('host_id', userId)
-
-    if (hostedError) {
-      Alert.alert('Error loading hosted meals', hostedError.message)
-    } else {
-      setHostedMeals(hosted)
-    }
-
-    const { data: joined, error: joinedError } = await supabase
+  
+    const { data: joined } = await supabase
       .from('meals')
       .select('*')
       .neq('host_id', userId)
       .contains('joined_guests', [userId])
-
-    if (joinedError) {
-      Alert.alert('Error loading joined meals', joinedError.message)
-    } else {
-      setJoinedMeals(joined)
-    }
+  
+    setHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() > now) || [])
+    setPastHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() <= now) || [])
+    setJoinedMeals(joined?.filter(m => new Date(m.meal_date).getTime() > now) || [])
+    setPastJoinedMeals(joined?.filter(m => new Date(m.meal_date).getTime() <= now) || [])
+  
+    const guestIds = hosted?.flatMap(m => m.joined_guests || []) || []
+    const { data: guests } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', [...new Set(guestIds)])
+  
+    const lookup: any = {}
+    guests?.forEach(g => {
+      lookup[g.id] = g.username
+    })
+    setGuestInfo(lookup)
   }
+  
 
   useFocusEffect(
     useCallback(() => {
@@ -96,9 +122,7 @@ export default function MyMeals({ session }: { session: Session }) {
 
       if (uploadError) throw new Error(uploadError.message)
 
-      const { data: url } = await supabase.storage
-        .from('images')
-        .getPublicUrl(fileName)
+      const { data: url } = await supabase.storage.from('images').getPublicUrl(fileName)
 
       if (url?.publicUrl) {
         setSelectedMeal((prev: any) => ({ ...prev, image_url: url.publicUrl }))
@@ -153,6 +177,71 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   }
 
+  const handleSubmitReview = async () => {
+    if (!mealToReview || !currentRevieweeId) return
+  
+    const newReview = {
+      meal_id: mealToReview.id,
+      reviewer_id: session.user.id,
+      rating: reviewRating,
+      comment: reviewComment,
+      timestamp: new Date().toISOString(),
+    }
+  
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('reviews, rating')
+      .eq('id', currentRevieweeId)
+      .single()
+  
+    if (error || !profile) {
+      Alert.alert('Error fetching profile', error?.message || 'Unknown error')
+      return
+    }
+  
+    const reviewsArray = Array.isArray(profile.reviews) ? profile.reviews : []
+    const updatedReviews = [...reviewsArray, newReview]
+  
+    const avgRating =
+      Math.round(
+        (updatedReviews.reduce((acc, r) => acc + r.rating, 0) / updatedReviews.length) * 10
+      ) / 10
+  
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ reviews: updatedReviews, rating: avgRating })
+      .eq('id', currentRevieweeId)
+  
+    if (updateError) {
+      Alert.alert('Error submitting review', updateError.message)
+      return
+    }
+  
+    if (session.user.id === mealToReview.host_id) {
+      const updatedGuests = [...(mealToReview.reviewed_guests || []), currentRevieweeId]
+      await supabase
+        .from('meals')
+        .update({ reviewed_guests: updatedGuests })
+        .eq('id', mealToReview.id)
+    } else {
+      const updatedHostReviewers = [...(mealToReview.host_reviewed || []), session.user.id]
+      await supabase
+        .from('meals')
+        .update({ host_reviewed: updatedHostReviewers })
+        .eq('id', mealToReview.id)
+    }
+  
+    // UI reset + refresh
+    Alert.alert('Thanks for the review!')
+    setReviewModalVisible(false)
+    setReviewRating(0)
+    setReviewComment('')
+    setCurrentRevieweeId('')
+    fetchMyMeals()
+  }
+  
+  
+
   return (
     <ScrollView style={styles.container}>
       <View style={{ marginTop: 30 }}>
@@ -180,7 +269,7 @@ export default function MyMeals({ session }: { session: Session }) {
           </TouchableOpacity>
         ))
       )}
-
+  
       <Text h3 style={styles.sectionTitle}>Meals You've Joined</Text>
       {joinedMeals.length === 0 ? (
         <Text style={styles.emptyText}>You haven't joined any meals yet.</Text>
@@ -197,58 +286,120 @@ export default function MyMeals({ session }: { session: Session }) {
               onPress={() => handleLeaveMeal(meal.id)}
               buttonStyle={styles.leaveButton}
             />
+            {new Date(meal.meal_date).getTime() <= Date.now() && (
+              <Button
+                title="Leave a Review"
+                onPress={() => {
+                  setCurrentRevieweeId(meal.host_id)
+                  setMealToReview(meal)
+                  setReviewModalVisible(true)
+                }}
+                buttonStyle={{ backgroundColor: '#FFD700', borderRadius: 20, marginTop: 10 }}
+              />
+            )}
           </Card>
         ))
       )}
-
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setModalVisible(false)}
-      >
+  
+      <Text h3 style={styles.sectionTitle}>Rate Previous Meals (as Guest)</Text>
+      {pastJoinedMeals.filter(meal => !(meal.host_reviewed || []).includes(session.user.id)).length === 0 ? (
+        <Text style={styles.emptyText}>You've reviewed all your past hosts.</Text>
+      ) : (
+        pastJoinedMeals
+          .filter(meal => !(meal.host_reviewed || []).includes(session.user.id))
+          .map(meal => (
+            <Card key={meal.id} containerStyle={styles.card}>
+              <Text h4>{meal.name}</Text>
+              <Button
+                title="Review Host"
+                onPress={() => {
+                  setCurrentRevieweeId(meal.host_id)
+                  setMealToReview(meal)
+                  setReviewModalVisible(true)
+                }}
+                buttonStyle={{ backgroundColor: '#FFD700', borderRadius: 20, marginTop: 10 }}
+              />
+            </Card>
+          ))
+      )}
+  
+      <Text h3 style={styles.sectionTitle}>Rate Your Guests (as Host)</Text>
+      {pastHostedMeals.filter(meal =>
+        (meal.joined_guests || []).some((g: string) =>
+          !(meal.reviewed_guests || []).includes(g)
+        )
+      ).length === 0 ? (
+        <Text style={styles.emptyText}>You've reviewed all your guests.</Text>
+      ) : (
+        pastHostedMeals.map(meal => {
+          const reviewed = meal.reviewed_guests || []
+          const unreviewedGuests = (meal.joined_guests || []).filter((g: string) => !reviewed.includes(g))
+  
+          if (unreviewedGuests.length === 0) return null
+  
+          return (
+            <Card key={meal.id} containerStyle={styles.card}>
+              <Text h4>{meal.name}</Text>
+              {unreviewedGuests.map((guestId: string) => (
+                <View key={guestId} style={{ marginTop: 10 }}>
+                  <Text>{guestInfo[guestId] || 'Guest'}</Text>
+                  <Button
+                    title="Review Guest"
+                    onPress={() => {
+                      setCurrentRevieweeId(guestId)
+                      setMealToReview(meal)
+                      setReviewModalVisible(true)
+                    }}
+                    buttonStyle={{ backgroundColor: '#FFD700', borderRadius: 20, marginTop: 5 }}
+                  />
+                </View>
+              ))}
+            </Card>
+          )
+        })
+      )}
+  
+      <Modal visible={modalVisible} animationType="slide" transparent={false} onRequestClose={() => setModalVisible(false)}>
         <ScrollView style={styles.modalContainer}>
           <Text h3>Edit Meal</Text>
-
-          <TextInput
-            placeholder="Meal Name"
-            value={selectedMeal?.name}
-            onChangeText={(text) => setSelectedMeal({ ...selectedMeal, name: text })}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Location"
-            value={selectedMeal?.location}
-            onChangeText={(text) => setSelectedMeal({ ...selectedMeal, location: text })}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Price"
-            keyboardType="decimal-pad"
-            value={selectedMeal?.price?.toString() || ''}
-            onChangeText={(text) => setSelectedMeal({ ...selectedMeal, price: text })}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Max Guests"
-            keyboardType="numeric"
-            value={selectedMeal?.max_guests?.toString() || ''}
-            onChangeText={(text) => setSelectedMeal({ ...selectedMeal, max_guests: text })}
-            style={styles.input}
-          />
-
+          <TextInput placeholder="Meal Name" value={selectedMeal?.name} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, name: text })} style={styles.input} />
+          <TextInput placeholder="Location" value={selectedMeal?.location} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, location: text })} style={styles.input} />
+          <TextInput placeholder="Price" keyboardType="decimal-pad" value={selectedMeal?.price?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, price: text })} style={styles.input} />
+          <TextInput placeholder="Max Guests" keyboardType="numeric" value={selectedMeal?.max_guests?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, max_guests: text })} style={styles.input} />
           <Button title="Pick Image" onPress={pickImage} buttonStyle={styles.imageButton} />
-          {selectedMeal?.image_url && (
-            <Image source={{ uri: selectedMeal.image_url }} style={styles.image} />
-          )}
-
+          {selectedMeal?.image_url && <Image source={{ uri: selectedMeal.image_url }} style={styles.image} />}
           <Button title="Save Changes" onPress={handleEditSave} buttonStyle={styles.saveButton} />
           <Button title="Cancel" onPress={() => setModalVisible(false)} type="clear" />
         </ScrollView>
       </Modal>
+  
+      <Modal visible={reviewModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.reviewModal}>
+          <Card containerStyle={styles.reviewCard}>
+            <Text h4 style={{ textAlign: 'center' }}>Leave a Review</Text>
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                  <Text style={{ fontSize: 30, color: reviewRating >= star ? '#FFD700' : '#ccc' }}>★</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              placeholder="Write a comment (optional)"
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              style={styles.input}
+              multiline
+            />
+            <Button title="Submit Review" onPress={handleSubmitReview} buttonStyle={{ backgroundColor: '#ffb31a', borderRadius: 20, marginTop: 10 }} />
+            <Button title="Cancel" type="clear" onPress={() => setReviewModalVisible(false)} />
+          </Card>
+        </View>
+      </Modal>
     </ScrollView>
   )
-}
+  
+}  
 
 const styles = StyleSheet.create({
   container: {
@@ -306,5 +457,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffb31a',
     borderRadius: 30,
     marginTop: 20,
+  },
+  reviewModal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  reviewCard: {
+    width: '90%',
+    borderRadius: 16,
+    padding: 20,
+  },
+  starRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 10,
   },
 })
