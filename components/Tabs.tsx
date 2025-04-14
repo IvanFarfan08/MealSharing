@@ -4,7 +4,7 @@ import { Icon } from '@rneui/themed'
 
 import AccountScreen from './Account'
 import HostMeal from './HostMeal'
-import FindMeals from './FindMeals'
+import MealMap from './MealMap'
 import MyMeals from './MyMeals' // <-- Updated from SearchMeals
 import { Session } from '@supabase/supabase-js'
 
@@ -23,7 +23,7 @@ export default function MainTabs({ session }: { session: Session }) {
       {/* Home tab - Find Meals */}
       <Tab.Screen
         name="Find"
-        children={() => <FindMeals session={session} />}
+        children={() => <MealMap />}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Icon name="map-marker" type="font-awesome" color={color} size={size} />
