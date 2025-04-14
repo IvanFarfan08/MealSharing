@@ -5,7 +5,7 @@ import { Icon } from '@rneui/themed'
 import AccountScreen from './Account'
 import HostMeal from './HostMeal'
 import FindMeals from './FindMeals'
-import SearchMeals from './SearchMeals'
+import MyMeals from './MyMeals' // <-- Updated from SearchMeals
 import { Session } from '@supabase/supabase-js'
 
 const Tab = createBottomTabNavigator()
@@ -20,7 +20,7 @@ export default function MainTabs({ session }: { session: Session }) {
         tabBarLabelStyle: { fontSize: 12 },
       }}
     >
-      {/* Make FindMeals first/home tab */}
+      {/* Home tab - Find Meals */}
       <Tab.Screen
         name="Find"
         children={() => <FindMeals session={session} />}
@@ -31,16 +31,18 @@ export default function MainTabs({ session }: { session: Session }) {
         }}
       />
 
+      {/* Updated tab - My Meals */}
       <Tab.Screen
-        name="Search"
-        component={SearchMeals}
+        name="My Meals"
+        children={() => <MyMeals session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="search" type="font-awesome" color={color} size={size} />
+            <Icon name="list" type="font-awesome" color={color} size={size} />
           ),
         }}
       />
 
+      {/* Host tab */}
       <Tab.Screen
         name="Host"
         children={() => <HostMeal session={session} />}
@@ -51,7 +53,7 @@ export default function MainTabs({ session }: { session: Session }) {
         }}
       />
 
-      {/* Move Account to end */}
+      {/* Account tab */}
       <Tab.Screen
         name="Account"
         children={() => <AccountScreen session={session} />}
