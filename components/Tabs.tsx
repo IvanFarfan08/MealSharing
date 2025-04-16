@@ -9,6 +9,7 @@ import HostMeal from './HostMeal'
 import MealMap from './MealMap'
 import MyMeals from './MyMeals' // <-- Updated from SearchMeals
 import { Session } from '@supabase/supabase-js'
+import FindMeals from './FindMeals'
 
 const Tab = createBottomTabNavigator()
 
@@ -109,7 +110,7 @@ export default function MainTabs({ session }: { session: Session }) {
       {/* Home tab - Find Meals */}
       <Tab.Screen
         name="Find"
-        children={() => <MealMap userLocation={userLocation} />}
+        children={() => <MealMap userLocation={userLocation} session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Icon name="map-marker" type="font-awesome" color={color} size={size} />

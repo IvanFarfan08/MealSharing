@@ -144,7 +144,7 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
 
     const { error } = await supabase.from('meals').insert([{
       name,
-      location: [location], // Convert to array for JSONB[] database column
+      location: location,
       max_guests: parseInt(maxGuests),
       price: parseFloat(price),
       meal_date: mealDate.toISOString(),
