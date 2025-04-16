@@ -47,14 +47,14 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
   const [meals, setMeals] = useState<any[]>([]);
   const [selectedMeal, setSelectedMeal] = useState<any>(null);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
-  
+
   // Filter states
   const [dateFilter, setDateFilter] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [filterTime, setFilterTime] = useState(false);
-  
+
   // Event handler wrappers
   const handleRefresh = () => fetchMeals();
   const handleResetFilters = () => {
@@ -72,15 +72,15 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
       const { data: mealsData, error: mealsError } = await supabase
         .from('meals')
         .select('ingredients');
-      
+
       if (mealsError) {
         console.error('Error fetching meal data:', mealsError);
         return;
       }
-      
+
       // Extract unique ingredients from all meals
       const uniqueIngredients = new Set<string>();
-      
+
       mealsData.forEach(meal => {
         // Handle ingredients (assuming it's an array in your database)
         if (meal.ingredients && Array.isArray(meal.ingredients)) {
@@ -89,10 +89,10 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
           });
         }
       });
-      
+
       // Convert Set to Array and update state
       setIngredients(Array.from(uniqueIngredients));
-      
+
     } catch (error) {
       console.error('Error fetching filter options:', error);
     }
@@ -104,23 +104,23 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     filterTime?: boolean
   }) => {
     setLoading(true);
-    
+
     let query = supabase
       .from('meals')
       .select('*');
-    
+
     // Apply filters if provided
     if (filters) {
       // Date filter
       if (filters.date) {
         const filterDate = new Date(filters.date);
         filterDate.setHours(0, 0, 0, 0);
-        
+
         // If filterTime is false, filter only by date
         if (!filters.filterTime) {
           const nextDay = new Date(filterDate);
           nextDay.setDate(nextDay.getDate() + 1);
-          
+
           query = query
             .gte('meal_date', filterDate.toISOString())
             .lt('meal_date', nextDay.toISOString());
@@ -129,14 +129,14 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
           query = query.eq('meal_date', filterDate.toISOString());
         }
       }
-      
+
       // Ingredients filter
       if (filters.ingredients && filters.ingredients.length > 0) {
         // For each selected ingredient, create an "ingredients ?" condition
         // This handles each ingredient individually to avoid JSON syntax errors
         console.log(filters.ingredients)
         filters.ingredients.forEach(ingredient => {
-          query = query.contains('ingredients', [ ingredient ]);
+          query = query.contains('ingredients', [ingredient]);
         });
       }
     }
@@ -148,7 +148,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     } else {
       setMeals(data);
     }
-    
+
     setLoading(false);
   }
 
@@ -157,7 +157,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     fetchFilterOptions();
     setShowFilterDialog(true);
   }
-  
+
   const applyFilters = () => {
     // Apply all selected filters
     fetchMeals({
@@ -167,59 +167,67 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     });
     setShowFilterDialog(false);
   }
-  
+
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setDateFilter(selectedDate);
     }
   };
-  
+
   const toggleIngredient = (ingredient: string) => {
-    setSelectedIngredients(current => 
-      current.includes(ingredient) 
+    setSelectedIngredients(current =>
+      current.includes(ingredient)
         ? current.filter(i => i !== ingredient)
         : [...current, ingredient]
     );
   };
-  
 
-    
+
+
   const handleJoinMeal = async () => {
-      if (!selectedMeal) return
-  
-      if (selectedMeal.host_id === session.user.id) {
-        Alert.alert('Not Allowed', 'You cannot join a meal you are hosting.')
-        return
-      }
-  
-      const alreadyJoined = selectedMeal.joined_guests?.includes(session.user.id)
-      if (alreadyJoined) {
-        Alert.alert('Already Joined', 'You have already joined this meal.')
-        return
-      }
-  
-      const updatedGuests = [...(selectedMeal.joined_guests || []), session.user.id]
-  
-      const { error } = await supabase
-        .from('meals')
-        .update({ joined_guests: updatedGuests })
-        .eq('id', selectedMeal.id)
-  
-      if (error) {
-        Alert.alert('Join Error', error.message)
-      } else {
-        Alert.alert('Joined Meal', `You have joined the meal: ${selectedMeal.name}`)
-        fetchMeals()
-      }
+    if (!selectedMeal) return;
+
+    if (selectedMeal.host_id === session.user.id) {
+      Alert.alert('Not Allowed', 'You cannot join a meal you are hosting.');
+      return;
     }
+
+    const alreadyRequested = selectedMeal.requested_guests?.includes(session.user.id);
+    const alreadyJoined = selectedMeal.joined_guests?.includes(session.user.id);
+
+    if (alreadyJoined) {
+      Alert.alert('Already Joined', 'You have already joined this meal.');
+      return;
+    }
+
+    if (alreadyRequested) {
+      Alert.alert('Already Requested', 'Wait for the host to admit you.');
+      return;
+    }
+
+    const updatedRequests = [...(selectedMeal.requested_guests || []), session.user.id];
+
+    const { error } = await supabase
+      .from('meals')
+      .update({ requested_guests: updatedRequests })
+      .eq('id', selectedMeal.id);
+
+    if (error) {
+      Alert.alert('Request Failed', error.message);
+    } else {
+      Alert.alert('Request Sent', 'Your join request has been sent to the host!');
+      fetchMeals(); // keep this to refresh map data
+    }
+  };
+
 
   useEffect(() => {
     fetchMeals();
     // Also fetch filter options when component mounts
     fetchFilterOptions();
   }, []);
-  
+
   useEffect(() => {
     setRegion(userLocation);
   }, [userLocation]);
@@ -376,7 +384,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                   <Image
                     source={{ uri: meal.image_url }}
                     style={styles.calloutImage}
-                  />  
+                  />
                 </View>
                 <Text style={styles.calloutTime}>
                   {new Date(meal.meal_date).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour12: true, hour: '2-digit', minute: '2-digit' })}
@@ -392,9 +400,9 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
           </Marker>
         ))}
       </MapView>
-      
-      <TouchableOpacity 
-        style={styles.refreshButton} 
+
+      <TouchableOpacity
+        style={styles.refreshButton}
         onPress={handleRefresh}
       >
         <Ionicons name="refresh" size={24} color="white" />
@@ -409,38 +417,38 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
         }}
         containerStyle={{
           position: 'absolute',
-          bottom: 90, 
+          bottom: 90,
           right: 20,
         }}
         onPress={handleFilter}
       />
-      
+
       <Dialog
         isVisible={showFilterDialog}
         onBackdropPress={() => setShowFilterDialog(false)}
         overlayStyle={styles.dialogContainer}
       >
         <Dialog.Title title="Filter Meals" titleStyle={{ textAlign: 'center' }} />
-        
+
         <ScrollView style={styles.filterScroll}>
 
-          
+
           {/* Date Filter */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Date</Text>
-            
+
             {dateFilter && (
               <Text style={styles.dateDisplay}>
-                {dateFilter.toLocaleDateString('en-US', { 
+                {dateFilter.toLocaleDateString('en-US', {
                   weekday: 'long',
-                  month: 'long', 
-                  day: 'numeric', 
-                  year: 'numeric' 
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
                 })}
               </Text>
             )}
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
             >
@@ -448,9 +456,9 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                 {dateFilter ? 'Change Date' : 'Select Date'}
               </Text>
             </TouchableOpacity>
-            
+
             {dateFilter && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setDateFilter(null)}
               >
                 <Text style={{ textAlign: 'center', color: '#999' }}>
@@ -458,7 +466,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                 </Text>
               </TouchableOpacity>
             )}
-            
+
             {showDatePicker && (
               <DateTimePicker
                 value={dateFilter || new Date()}
@@ -467,7 +475,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                 onChange={handleDateChange}
               />
             )}
-            
+
             {dateFilter && (
               <View style={styles.timeFilterRow}>
                 <Text>Also filter by time</Text>
@@ -480,9 +488,9 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
               </View>
             )}
           </View>
-          
+
           <Divider width={1} />
-          
+
           {/* Ingredients Filter */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Ingredients</Text>
@@ -497,16 +505,16 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
               />
             ))}
           </View>
-          
+
 
         </ScrollView>
-        
+
         <Dialog.Actions>
           <Dialog.Button
             title="RESET"
             onPress={handleResetFilters}
           />
-          <Dialog.Button 
+          <Dialog.Button
             title="APPLY"
             titleStyle={{ color: '#ffb31a' }}
             onPress={applyFilters}
