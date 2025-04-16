@@ -272,7 +272,21 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   }
 
-  
+  const handleRejectRequest = async (meal: any, guestId: string) => {
+    // Remove the guest from the requested list
+    const updatedRequested = (meal.requested_guests || []).filter((id: string) => id !== guestId);
+    // Update the meal in the database
+    const { error } = await supabase
+      .from('meals')
+      .update({ requested_guests: updatedRequested })
+      .eq('id', meal.id);
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Guest Rejected', 'The guest has been removed from the requested list.');
+      fetchMyMeals(); // Refresh meals
+    }
+  };
   
 
   return (
@@ -318,6 +332,15 @@ export default function MyMeals({ session }: { session: Session }) {
                         onPress={() => handleAcceptRequest(meal, guestId)}
                         buttonStyle={{
                           backgroundColor: '#4CAF50',
+                          borderRadius: 20,
+                          marginTop: 5,
+                        }}
+                      />
+                      <Button
+                        title="Reject"
+                        onPress={() => handleRejectRequest(meal, guestId)}
+                        buttonStyle={{
+                          backgroundColor: '#ff4d4d',
                           borderRadius: 20,
                           marginTop: 5,
                         }}
