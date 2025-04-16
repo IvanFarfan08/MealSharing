@@ -30,6 +30,8 @@ export default function MyMeals({ session }: { session: Session }) {
   const [pastHostedMeals, setPastHostedMeals] = useState<any[]>([])
   const [pastJoinedMeals, setPastJoinedMeals] = useState<any[]>([])
   const [guestInfo, setGuestInfo] = useState<any>({})
+  const [requestedMeals, setRequestedMeals] = useState<any[]>([])
+
 
 
   const fetchMyMeals = async () => {
@@ -46,6 +48,17 @@ export default function MyMeals({ session }: { session: Session }) {
       .select('*')
       .neq('host_id', userId)
       .contains('joined_guests', [userId])
+
+    const { data: requested } = await supabase
+      .from('meals')
+      .select('*')
+      .neq('host_id', userId)
+      .contains('requested_guests', [userId])
+
+      setRequestedMeals(requested?.filter(m => new Date(m.meal_date).getTime() > now) || [])
+
+
+
   
     setHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() > now) || [])
     setPastHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() <= now) || [])
@@ -239,6 +252,26 @@ export default function MyMeals({ session }: { session: Session }) {
     setCurrentRevieweeId('')
     fetchMyMeals()
   }
+  const handleAcceptRequest = async (meal: any, guestId: string) => {
+    const updatedRequested = (meal.requested_guests || []).filter((id: string) => id !== guestId)
+    const updatedJoined = [...(meal.joined_guests || []), guestId]
+
+    const { error } = await supabase
+      .from('meals')
+      .update({
+        requested_guests: updatedRequested,
+        joined_guests: updatedJoined,
+      })
+      .eq('id', meal.id)
+
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      Alert.alert('Guest Accepted', 'The guest has been added to your meal.')
+      fetchMyMeals()
+    }
+  }
+
   
   
 
@@ -259,16 +292,45 @@ export default function MyMeals({ session }: { session: Session }) {
             }}
           >
             <Card containerStyle={styles.card}>
-              {meal.image_url && <Image source={{ uri: meal.image_url }} style={styles.image} />}
+              {meal.image_url && (
+                <Image source={{ uri: meal.image_url }} style={styles.image} />
+              )}
               <Text h4>{meal.name}</Text>
               <Text>{`Location: ${meal.location}`}</Text>
               <Text>{`Price: $${meal.price}`}</Text>
-              <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
+              <Text>{`Guests Joined: ${meal.joined_guests?.length || 0
+                }/${meal.max_guests}`}</Text>
               <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
+
+              {/* Incoming Join Requests */}
+              {(meal.requested_guests || []).length > 0 && (
+                <>
+                  <Text
+                    style={{ marginTop: 15, fontWeight: 'bold', color: '#333' }}
+                  >
+                    Incoming Join Requests:
+                  </Text>
+                  {(meal.requested_guests || []).map((guestId: string) => (
+                    <View key={guestId} style={{ marginTop: 10 }}>
+                      <Text>{guestInfo[guestId] || guestId}</Text>
+                      <Button
+                        title="Accept"
+                        onPress={() => handleAcceptRequest(meal, guestId)}
+                        buttonStyle={{
+                          backgroundColor: '#4CAF50',
+                          borderRadius: 20,
+                          marginTop: 5,
+                        }}
+                      />
+                    </View>
+                  ))}
+                </>
+              )}
             </Card>
           </TouchableOpacity>
         ))
       )}
+
   
       <Text h3 style={styles.sectionTitle}>Meals You've Joined</Text>
       {joinedMeals.length === 0 ? (
@@ -300,6 +362,22 @@ export default function MyMeals({ session }: { session: Session }) {
           </Card>
         ))
       )}
+
+      <Text h3 style={styles.sectionTitle}>Meals You've Requested</Text>
+      {requestedMeals.length === 0 ? (
+        <Text style={styles.emptyText}>You have no pending requests.</Text>
+      ) : (
+        requestedMeals.map((meal) => (
+          <Card key={meal.id} containerStyle={styles.card}>
+            {meal.image_url && <Image source={{ uri: meal.image_url }} style={styles.image} />}
+            <Text h4>{meal.name}</Text>
+            <Text>{`Location: ${meal.location}`}</Text>
+            <Text>{`Price: $${meal.price}`}</Text>
+            <Text>{`Requested - Waiting on Host Approval`}</Text>
+          </Card>
+        ))
+      )}
+
   
       <Text h3 style={styles.sectionTitle}>Rate Previous Meals (as Guest)</Text>
       {pastJoinedMeals.filter(meal => !(meal.host_reviewed || []).includes(session.user.id)).length === 0 ? (
