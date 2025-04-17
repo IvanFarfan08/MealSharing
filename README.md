@@ -33,7 +33,7 @@ A React Native mobile application that connects people through shared meals. Use
   Manages Supabase DB. Implemented guest’s ability to browse meals based on location, time, and meal information.
 
 - **Johan Jaramillo**  
-  Implemented rating system for users and hosts. Implemented rating system for users and hosts, as well as hosts rejecting a guest’s join request.
+  Implemented rating system for users and hosts, as well as hosts rejecting a guest’s join request.
 
 - **Cory Vitanza**  
   Focused on documentation. Performed bug testing/fixing.
