@@ -6,19 +6,46 @@ A React Native mobile application that connects people through shared meals. Use
 
 - React Native + TypeScript
 - Supabase
+- Stripe API
 
-## Contributors & Responsabilities
+## Contributors & Responsibilities
 
-- **Ivan Farfan**: Authentication and database management service implementation. Created the project structure and database schema.
-- **Johan Jaramillo**: Improved the log in and account creation UI, including the addition of smooth transitions and Lottie animations. Designed and implemented the "Host a Meal" feature, enabling users to create and publish meal events with full details such as location, date, courses, and pricing.
-- **Ryan Davis**: Set up Stripe API integration based on the "Find Meals" page. Implemented bug fixes where needed and provided documentation for the milestone.
-- **Cory Vitanza**: Updated the "Find Meals" page layout and functionality. Implemented bugfixes for misc errors/bugs.
+### Milestone 3
+
+- **Ivan Farfan**  
+  Authentication and database management service implementation. Created the project structure and database schema.
+
+- **Johan Jaramillo**  
+  Improved the log in and account creation UI, including the addition of smooth transitions and Lottie animations. Designed and implemented the "Host a Meal" feature, enabling users to create and publish meal events with full details such as location, date, courses, and pricing.
+
+- **Ryan Davis**  
+  Set up Stripe API integration based on the "Find Meals" page. Implemented bug fixes where needed and provided documentation for the milestone.
+
+- **Cory Vitanza**  
+  Updated the "Find Meals" page layout and functionality. Implemented bugfixes for misc errors/bugs.
+  
+### Milestone 4
+
+- **Ryan Davis**  
+  Implemented request logic allowing guests to request joining a meal and hosts to approve the request.
+
+- **Ivan Farfan**  
+  Manages Supabase DB. Implemented guest’s ability to browse meals based on location, time, and meal information.
+
+- **Johan Jaramillo**  
+  Implemented rating system for users and hosts.
+
+- **Cory Vitanza**  
+  Focused on documentation. Performed bug testing/fixing.
 
 ## Features
 
 - **User Authentication**: User registration and login.
 - **Meal Discovery**: User can find meals hosted by others in their nearby area.
+  - **Meal Requesting**: Users can request to join meals created by hosts.
 - **Meal Hosting**: User can host meals for others to join.
+  - **Meal Accepting / Declining**: Hosts can accept / deny users from their meal.
+- **Host / Guest Rating**: Users can rate their experience of the meal on a per-user basis.
 
 ## Features (Project) Board
 
