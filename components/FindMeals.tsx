@@ -70,59 +70,60 @@ export default function FindMeals({ session }: { session: Session }) {
   })
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={{ paddingTop: 40 }}>
-        <Text h3 style={styles.heading}>Hi 👋</Text>
-        <Text style={styles.subtitle}>Find meals shared by your community</Text>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+    >
+      <Text h3 style={styles.heading}>Find Meals</Text>
+      <Text style={styles.subtitle}>Find meals shared by your community</Text>
 
-        <View style={styles.mealsContainer}>
-          {visibleMeals.map(meal => (
-            <TouchableOpacity key={meal.id} onPress={() => handleMealSelect(meal)}>
-              <Card containerStyle={styles.card}>
-                {meal.image_url ? (
-                  <Image source={{ uri: meal.image_url }} style={styles.image} />
-                ) : null}
-                <Text h4>{meal.name}</Text>
-                <Text>{`Location: ${meal.location}`}</Text>
-                <Text>{`Date: ${new Date(meal.meal_date).toLocaleDateString()}`}</Text>
-                <Text>{`Guests: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
-                <Text>{`Price: $${meal.price}`}</Text>
-                <Button title="Join Meal" onPress={() => handleMealSelect(meal)} buttonStyle={styles.joinButton} />
-              </Card>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            {selectedMeal && (
-              <Card>
-                {selectedMeal.image_url ? (
-                  <Image source={{ uri: selectedMeal.image_url }} style={styles.modalImage} />
-                ) : null}
-                <Text h3>{selectedMeal.name}</Text>
-                <Text>{`Location: ${selectedMeal.location}`}</Text>
-                <Text>{`Date: ${new Date(selectedMeal.meal_date).toLocaleString()}`}</Text>
-                <Text>{`Price: $${selectedMeal.price}`}</Text>
-                <Text>{`Guests: ${selectedMeal.joined_guests?.length || 0}/${selectedMeal.max_guests}`}</Text>
-                <Text>{`Courses: ${(selectedMeal.courses || []).join(', ')}`}</Text>
-                <Text style={{ marginTop: 10 }}>Ingredients:</Text>
-                {(selectedMeal.ingredients || []).map((item: string, idx: number) => (
-                  <Text key={idx}>• {item}</Text>
-                ))}
-
-                <Button title="Join Meal" onPress={handleJoinMeal} buttonStyle={styles.joinButton} />
-                <Button title="Close" onPress={() => setModalVisible(false)} type="clear" />
-              </Card>
-            )}
-          </View>
-        </Modal>
+      <View style={styles.mealsContainer}>
+        {visibleMeals.map(meal => (
+          <TouchableOpacity key={meal.id} onPress={() => handleMealSelect(meal)}>
+            <Card containerStyle={styles.card}>
+              {meal.image_url ? (
+                <Image source={{ uri: meal.image_url }} style={styles.image} />
+              ) : null}
+              <Text h4>{meal.name}</Text>
+              <Text>{`Price: $${meal.price}`}</Text>
+              <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
+              <Button title="Join Meal" onPress={() => handleMealSelect(meal)} buttonStyle={styles.joinButton} />
+            </Card>
+          </TouchableOpacity>
+        ))}
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          {selectedMeal && (
+            <Card>
+              {selectedMeal.image_url ? (
+                <Image source={{ uri: selectedMeal.image_url }} style={styles.modalImage} />
+              ) : null}
+              <Text h3>{selectedMeal.name}</Text>
+              <Text>{`Location: ${selectedMeal.location}`}</Text>
+              <Text>{`Date: ${new Date(selectedMeal.meal_date).toLocaleString()}`}</Text>
+              <Text>{`Price: $${selectedMeal.price}`}</Text>
+              <Text>{`Guests: ${selectedMeal.joined_guests?.length || 0}/${selectedMeal.max_guests}`}</Text>
+              <Text>{`Courses: ${(selectedMeal.courses || []).join(', ')}`}</Text>
+              <Text style={{ marginTop: 10 }}>Ingredients:</Text>
+              {(selectedMeal.ingredients || []).map((item: string, idx: number) => (
+                <Text key={idx}>• {item}</Text>
+              ))}
+
+              <Button title="Join Meal" onPress={handleJoinMeal} buttonStyle={styles.joinButton} />
+              <Button title="Close" onPress={() => setModalVisible(false)} type="clear" />
+            </Card>
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -131,7 +132,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF3E0',
-    padding: 20,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+    paddingBottom: 80,
   },
   heading: {
     textAlign: 'center',
@@ -156,6 +161,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
@@ -179,5 +185,10 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
     marginBottom: 10,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#444',
   },
 })
