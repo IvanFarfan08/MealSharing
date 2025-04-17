@@ -22,7 +22,7 @@ A React Native mobile application that connects people through shared meals. Use
   Set up Stripe API integration based on the "Find Meals" page. Implemented bug fixes where needed and provided documentation for the milestone.
 
 - **Cory Vitanza**  
-  Updated the "Find Meals" page layout and functionality. Implemented bugfixes for misc errors/bugs.
+  Updated the "Find Meals" page layout and functionality. Implemented bug fixes for miscellaneous errors/bugs.
   
 ### Milestone 4
 
@@ -41,9 +41,9 @@ A React Native mobile application that connects people through shared meals. Use
 ## Features
 
 - **User Authentication**: User registration and login.
-- **Meal Discovery**: User can find meals hosted by others in their nearby area.
+- **Meal Discovery**: Users can find meals hosted by others in their nearby area.
   - **Meal Requesting**: Users can request to join meals created by hosts.
-- **Meal Hosting**: User can host meals for others to join.
+- **Meal Hosting**: Users can host meals for others to join.
   - **Meal Accepting / Declining**: Hosts can accept / deny users from their meal.
 - **Host / Guest Rating**: Users can rate their experience of the meal on a per-user basis.
 
