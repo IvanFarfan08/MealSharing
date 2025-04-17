@@ -46,59 +46,62 @@ export default function Account({ session }: { session: Session }) {
   )
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Account Settings</Text>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+    >
+      <Text h3 style={styles.heading}>Account</Text>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Username:</Text>
-          <Text style={styles.value}>{username}</Text>
+      <View style={styles.infoSection}>
+        <Text style={styles.label}>Username:</Text>
+        <Text style={styles.value}>{username}</Text>
 
-          <Text style={styles.label}>Email:</Text>
-          <Text style={styles.value}>{session.user.email}</Text>
+        <Text style={styles.label}>Email:</Text>
+        <Text style={styles.value}>{session.user.email}</Text>
 
-          <Text style={styles.label}>User ID:</Text>
-          <Text style={styles.value}>{session.user.id}</Text>
+        <Text style={styles.label}>User ID:</Text>
+        <Text style={styles.value}>{session.user.id}</Text>
 
-          {rating !== null && (
-            <>
-              <Text style={styles.label}>Average Rating:</Text>
-              <Text style={styles.value}>{rating.toFixed(1)} / 5.0</Text>
-            </>
-          )}
-        </View>
-
-        {reviews.length > 0 && (
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewTitle}>Reviews</Text>
-            {reviews.map((review, index) => (
-              <View key={index} style={styles.reviewCard}>
-                {renderStars(review.rating)}
-                <Text style={styles.reviewText}>{review.comment || 'No comment'}</Text>
-                <Text style={styles.reviewDate}>
-                  {new Date(review.timestamp).toLocaleDateString()}
-                </Text>
-              </View>
-            ))}
-          </View>
+        {rating !== null && (
+          <>
+            <Text style={styles.label}>Average Rating:</Text>
+            <Text style={styles.value}>{rating.toFixed(1)} / 5.0</Text>
+          </>
         )}
+      </View>
 
-        <Button
-          title="Log Out"
-          onPress={handleSignOut}
-          buttonStyle={styles.logoutButton}
-        />
-
-        <View style={styles.lottieContainer}>
-          <LottieView
-            source={require('../assets/animations/Animation3.json')}
-            autoPlay
-            loop
-            style={styles.lottie}
-          />
+      {reviews.length > 0 && (
+        <View style={styles.reviewSection}>
+          <Text style={styles.reviewTitle}>Reviews</Text>
+          {reviews.map((review, index) => (
+            <View key={index} style={styles.reviewCard}>
+              {renderStars(review.rating)}
+              <Text style={styles.reviewText}>{review.comment || 'No comment'}</Text>
+              <Text style={styles.reviewDate}>
+                {new Date(review.timestamp).toLocaleDateString()}
+              </Text>
+            </View>
+          ))}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      )}
+
+      <Button
+        title="Log Out"
+        onPress={handleSignOut}
+        buttonStyle={styles.logoutButton}
+      />
+
+      <View style={styles.lottieContainer}>
+        <LottieView
+          source={require('../assets/animations/Animation3.json')}
+          autoPlay
+          loop
+          style={styles.lottie}
+        />
+      </View>
+    </ScrollView>
   )
 }
 
@@ -108,9 +111,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
   },
   content: {
+    flex: 1,
     padding: 24,
+    paddingBottom: 80,
   },
-  title: {
+  heading: {
     fontSize: 28,
     fontWeight: '700',
     color: '#333',
