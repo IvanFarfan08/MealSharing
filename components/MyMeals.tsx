@@ -1,4 +1,3 @@
-//account.tsx 
 import React, { useState, useCallback } from 'react'
 import {
   View,
@@ -31,8 +30,7 @@ export default function MyMeals({ session }: { session: Session }) {
   const [pastJoinedMeals, setPastJoinedMeals] = useState<any[]>([])
   const [guestInfo, setGuestInfo] = useState<any>({})
   const [requestedMeals, setRequestedMeals] = useState<any[]>([])
-
-
+  const [requesterInfo, setRequesterInfo] = useState<any>({})
 
   const fetchMyMeals = async () => {
     const userId = session.user.id
@@ -57,14 +55,12 @@ export default function MyMeals({ session }: { session: Session }) {
 
       setRequestedMeals(requested?.filter(m => new Date(m.meal_date).getTime() > now) || [])
 
-
-
-  
     setHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() > now) || [])
     setPastHostedMeals(hosted?.filter(m => new Date(m.meal_date).getTime() <= now) || [])
     setJoinedMeals(joined?.filter(m => new Date(m.meal_date).getTime() > now) || [])
     setPastJoinedMeals(joined?.filter(m => new Date(m.meal_date).getTime() <= now) || [])
   
+    // Get joined guests info
     const guestIds = hosted?.flatMap(m => m.joined_guests || []) || []
     const { data: guests } = await supabase
       .from('profiles')
@@ -76,6 +72,26 @@ export default function MyMeals({ session }: { session: Session }) {
       lookup[g.id] = g.username
     })
     setGuestInfo(lookup)
+
+    // Get requested guests info with full_name, rating, and reviews
+    const requesterIds = hosted?.flatMap(m => m.requested_guests || []) || []
+    if (requesterIds.length > 0) {
+      const { data: requesters } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, rating, reviews')
+        .in('id', [...new Set(requesterIds)])
+      
+      const requesterLookup: any = {}
+      requesters?.forEach(r => {
+        requesterLookup[r.id] = {
+          username: r.username,
+          full_name: r.full_name,
+          rating: r.rating,
+          reviews: r.reviews || []
+        }
+      })
+      setRequesterInfo(requesterLookup)
+    }
   }
   
 
@@ -267,13 +283,145 @@ export default function MyMeals({ session }: { session: Session }) {
     if (error) {
       Alert.alert('Error', error.message)
     } else {
+      // Create a notification for the accepted guest
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: guestId,
+          type: 'request_accepted',
+          meal_id: meal.id,
+          meal_name: meal.name,
+          host_id: session.user.id,
+          host_name: session.user.user_metadata?.username || 'Host',
+          read: false,
+          created_at: new Date().toISOString(),
+        })
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError)
+      }
+
       Alert.alert('Guest Accepted', 'The guest has been added to your meal.')
       fetchMyMeals()
     }
   }
 
-  
-  
+  const handleDenyRequest = async (meal: any, guestId: string) => {
+    const updatedRequested = (meal.requested_guests || []).filter((id: string) => id !== guestId)
+
+    const { error } = await supabase
+      .from('meals')
+      .update({
+        requested_guests: updatedRequested,
+      })
+      .eq('id', meal.id)
+
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      // Create a notification for the denied guest
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: guestId,
+          type: 'request_denied',
+          meal_id: meal.id,
+          meal_name: meal.name,
+          host_id: session.user.id,
+          host_name: session.user.user_metadata?.username || 'Host',
+          read: false,
+          created_at: new Date().toISOString(),
+        })
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError)
+      }
+
+      Alert.alert('Request Denied', 'The guest request has been denied.')
+      fetchMyMeals()
+    }
+  }
+
+  // Add a function to handle meal join requests
+  const handleJoinMeal = async (meal: any) => {
+    const userId = session.user.id
+    
+    // Check if user profile exists
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      Alert.alert('Account Error', 'Your account profile could not be found. Please contact support.')
+      return
+    }
+    
+    // Check if the meal is full
+    if (meal.joined_guests && meal.joined_guests.length >= meal.max_guests) {
+      Alert.alert('Meal Full', 'This meal is already full.')
+      return
+    }
+    
+    // Check if the user has already requested to join
+    if (meal.requested_guests && meal.requested_guests.includes(userId)) {
+      Alert.alert('Already Requested', 'You have already requested to join this meal.')
+      return
+    }
+    
+    // Check if the user has already joined
+    if (meal.joined_guests && meal.joined_guests.includes(userId)) {
+      Alert.alert('Already Joined', 'You have already joined this meal.')
+      return
+    }
+    
+    // Add the user to the requested_guests array
+    const updatedRequested = [...(meal.requested_guests || []), userId]
+    
+    const { error } = await supabase
+      .from('meals')
+      .update({
+        requested_guests: updatedRequested,
+      })
+      .eq('id', meal.id)
+    
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      // Get the guest's profile information
+      const { data: guestProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('username, full_name')
+        .eq('id', userId)
+        .single()
+      
+      if (profileError) {
+        console.error('Error fetching guest profile:', profileError)
+      }
+      
+      // Create a notification for the host
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: meal.host_id,
+          type: 'join_request',
+          meal_id: meal.id,
+          meal_name: meal.name,
+          guest_id: userId,
+          guest_name: guestProfile?.full_name || guestProfile?.username || 'Guest',
+          read: false,
+          created_at: new Date().toISOString(),
+        })
+      
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError)
+      }
+      
+      Alert.alert('Request Sent', 'Your request to join the meal has been sent to the host.')
+      fetchMyMeals()
+    }
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -284,23 +432,23 @@ export default function MyMeals({ session }: { session: Session }) {
         <Text style={styles.emptyText}>You haven't hosted any meals yet.</Text>
       ) : (
         hostedMeals.map((meal) => (
-          <TouchableOpacity
-            key={meal.id}
-            onPress={() => {
-              setSelectedMeal({ ...meal })
-              setModalVisible(true)
-            }}
-          >
+          <View key={meal.id}>
             <Card containerStyle={styles.card}>
-              {meal.image_url && (
-                <Image source={{ uri: meal.image_url }} style={styles.image} />
-              )}
-              <Text h4>{meal.name}</Text>
-              <Text>{`Location: ${meal.location}`}</Text>
-              <Text>{`Price: $${meal.price}`}</Text>
-              <Text>{`Guests Joined: ${meal.joined_guests?.length || 0
-                }/${meal.max_guests}`}</Text>
-              <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedMeal({ ...meal })
+                  setModalVisible(true)
+                }}
+              >
+                {meal.image_url && (
+                  <Image source={{ uri: meal.image_url }} style={styles.image} />
+                )}
+                <Text h4>{meal.name}</Text>
+                <Text>{`Price: $${meal.price}`}</Text>
+                <Text>{`Guests Joined: ${meal.joined_guests?.length || 0
+                  }/${meal.max_guests}`}</Text>
+                <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
+              </TouchableOpacity>
 
               {/* Incoming Join Requests */}
               {(meal.requested_guests || []).length > 0 && (
@@ -310,24 +458,74 @@ export default function MyMeals({ session }: { session: Session }) {
                   >
                     Incoming Join Requests:
                   </Text>
-                  {(meal.requested_guests || []).map((guestId: string) => (
-                    <View key={guestId} style={{ marginTop: 10 }}>
-                      <Text>{guestInfo[guestId] || guestId}</Text>
-                      <Button
-                        title="Accept"
-                        onPress={() => handleAcceptRequest(meal, guestId)}
-                        buttonStyle={{
-                          backgroundColor: '#4CAF50',
-                          borderRadius: 20,
-                          marginTop: 5,
-                        }}
-                      />
-                    </View>
-                  ))}
+                  {(meal.requested_guests || []).map((guestId: string) => {
+                    const requester = requesterInfo[guestId] || {}
+                    return (
+                      <View key={guestId} style={styles.requesterCard}>
+                        <Text style={styles.requesterName}>
+                          {requester.full_name || requester.username || guestId}
+                        </Text>
+                        
+                        {requester.rating !== undefined && (
+                          <View style={styles.ratingContainer}>
+                            <Text style={styles.ratingText}>Rating: {requester.rating.toFixed(1)}/5.0</Text>
+                            <View style={styles.starsContainer}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Text key={star} style={{ color: star <= requester.rating ? '#FFD700' : '#ccc' }}>
+                                  {star <= requester.rating ? '★' : '☆'}
+                                </Text>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+                        
+                        {requester.reviews && requester.reviews.length > 0 && (
+                          <View style={styles.reviewsContainer}>
+                            <Text style={styles.reviewsTitle}>Recent Reviews:</Text>
+                            {requester.reviews.slice(0, 2).map((review: any, index: number) => (
+                              <View key={index} style={styles.reviewItem}>
+                                <Text style={styles.reviewRating}>
+                                  {review.rating.toFixed(1)}/5.0 - {new Date(review.timestamp).toLocaleDateString()}
+                                </Text>
+                                {review.comment && (
+                                  <Text style={styles.reviewComment}>"{review.comment}"</Text>
+                                )}
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                        
+                        <View style={styles.requestButtonsContainer}>
+                          <Button
+                            title="Accept"
+                            onPress={() => handleAcceptRequest(meal, guestId)}
+                            buttonStyle={{
+                              backgroundColor: '#4CAF50',
+                              borderRadius: 20,
+                              marginTop: 10,
+                              flex: 1,
+                              marginRight: 5,
+                            }}
+                          />
+                          <Button
+                            title="Deny"
+                            onPress={() => handleDenyRequest(meal, guestId)}
+                            buttonStyle={{
+                              backgroundColor: '#f44336',
+                              borderRadius: 20,
+                              marginTop: 10,
+                              flex: 1,
+                              marginLeft: 5,
+                            }}
+                          />
+                        </View>
+                      </View>
+                    )
+                  })}
                 </>
               )}
             </Card>
-          </TouchableOpacity>
+          </View>
         ))
       )}
 
@@ -340,7 +538,6 @@ export default function MyMeals({ session }: { session: Session }) {
           <Card key={meal.id} containerStyle={styles.card}>
             {meal.image_url && <Image source={{ uri: meal.image_url }} style={styles.image} />}
             <Text h4>{meal.name}</Text>
-            <Text>{`Location: ${meal.location}`}</Text>
             <Text>{`Price: $${meal.price}`}</Text>
             <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
             <Button
@@ -484,6 +681,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF3E0',
     padding: 16,
+    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 22,
@@ -552,4 +750,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 10,
   },
+  requesterCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  requesterName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  ratingContainer: {
+    marginTop: 5,
+  },
+  ratingText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginTop: 2,
+  },
+  reviewsContainer: {
+    marginTop: 8,
+  },
+  reviewsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 4,
+  },
+  reviewItem: {
+    marginTop: 4,
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: '#ddd',
+  },
+  reviewRating: {
+    fontSize: 12,
+    color: '#666',
+  },
+  reviewComment: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  requestButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
 })
+

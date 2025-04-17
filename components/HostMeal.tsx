@@ -173,8 +173,13 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={{ paddingTop: 40 }}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+    >
+      <View>
         <Text h3 style={styles.heading}>Host a Meal</Text>
 
         <Input placeholder="Meal Name" value={name} onChangeText={setName} />
@@ -334,7 +339,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
   },
   content: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 100,
   },
   heading: {
     textAlign: 'center',

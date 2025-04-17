@@ -10,6 +10,7 @@ import MealMap from './MealMap'
 import MyMeals from './MyMeals' // <-- Updated from SearchMeals
 import { Session } from '@supabase/supabase-js'
 import FindMeals from './FindMeals'
+import Notifications from './Notifications'
 
 const Tab = createBottomTabNavigator()
 
@@ -103,8 +104,28 @@ export default function MainTabs({ session }: { session: Session }) {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#ffb31a',
-        tabBarStyle: { height: 60, paddingBottom: 5 },
-        tabBarLabelStyle: { fontSize: 12 },
+        tabBarStyle: { 
+          height: 60, 
+          paddingBottom: 8,
+          paddingTop: 5,
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          elevation: 4,
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          zIndex: 1000, // Ensure tab bar stays on top
+        },
+        tabBarLabelStyle: { fontSize: 11, marginTop: 2 },
+        tabBarIconStyle: { marginBottom: -8 },
       }}
     >
       {/* Home tab - Find Meals */}
@@ -113,7 +134,7 @@ export default function MainTabs({ session }: { session: Session }) {
         children={() => <MealMap userLocation={userLocation} session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="map-marker" type="font-awesome" color={color} size={size} />
+            <Icon name="map-marker" type="font-awesome" color={color} size={22} />
           ),
         }}
       />
@@ -124,7 +145,7 @@ export default function MainTabs({ session }: { session: Session }) {
         children={() => <MyMeals session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="list" type="font-awesome" color={color} size={size} />
+            <Icon name="list" type="font-awesome" color={color} size={22} />
           ),
         }}
       />
@@ -135,7 +156,18 @@ export default function MainTabs({ session }: { session: Session }) {
         children={() => <HostMeal session={session} userLocation={userLocation} />}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="cutlery" type="font-awesome" color={color} size={size} />
+            <Icon name="cutlery" type="font-awesome" color={color} size={22} />
+          ),
+        }}
+      />
+
+      {/* Notifications tab */}
+      <Tab.Screen
+        name="Notifications"
+        children={() => <Notifications session={session} />}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="bell" type="font-awesome" color={color} size={22} />
           ),
         }}
       />
@@ -146,7 +178,7 @@ export default function MainTabs({ session }: { session: Session }) {
         children={() => <AccountScreen session={session} />}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="user" type="font-awesome" color={color} size={size} />
+            <Icon name="user" type="font-awesome" color={color} size={22} />
           ),
         }}
       />
