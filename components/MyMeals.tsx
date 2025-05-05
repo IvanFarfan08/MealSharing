@@ -223,15 +223,21 @@ export default function MyMeals({ session }: { session: Session }) {
       }));
 
       // Insert notifications into the database
-      const { error: insertError } = await supabase
-        .from('notifications')
-        .insert(notifications);
-
-      if (insertError) {
-        throw new Error(`Error creating notifications: ${insertError.message}`);
+      if (notifications && mealData.joined_guests.length > 0) {
+        try {
+          const { error: insertError } = await supabase
+            .from('notifications')
+            .insert(notifications);
+            
+          if (insertError) {
+            throw new Error(`Error creating notifications: ${insertError.message}`);
+          }
+      
+          console.log('Notifications created successfully');
+        } catch (error: any) {
+          console.error('Error creating notifications:', error.message);
+        }
       }
-
-      console.log('Notifications created successfully');
     } catch (error: any) {
       console.error('Error in updateMealAndNotifyGuests:', error.message);
     }
