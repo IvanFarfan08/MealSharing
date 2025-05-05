@@ -140,6 +140,30 @@ export default function Notifications({ session }: { session: Session }) {
     Alert.alert('Request denied', 'This feature is not implemented yet')
   }
 
+  const handleAcceptNewDate = async (notification: any) => {
+    // Implementation for accepting a new date
+    Alert.alert('New date accepted', 'This feature is not implemented yet')
+  }
+
+  const handleOptOut = async (notification: any) => {
+    // Implementation for opting out
+    Alert.alert('Opted out', 'This feature is not implemented yet')
+  }
+
+  const handleAcceptChange = async (notification: any) => {
+    // Implementation for accepting the change
+    Alert.alert('Change accepted', 'You have accepted the new date/time.');
+    // Automatically delete the notification
+    await deleteNotification(notification.id);
+  };
+
+  const handleOptOutChange = async (notification: any) => {
+    // Implementation for opting out due to change
+    Alert.alert('Opted out', 'You have opted out of the meal due to the change.');
+    // Automatically delete the notification
+    await deleteNotification(notification.id);
+  };
+
   const renderNotificationContent = (notification: any) => {
     // Get the full name from our profiles cache or use the stored name
     const hostName = userProfiles[notification.host_id]?.full_name || notification.host_name || 'Host'
@@ -187,6 +211,65 @@ export default function Notifications({ session }: { session: Session }) {
               onPress={() => handleDenyRequest(notification)}
               buttonStyle={styles.denyButton}
             />
+          </View>
+        )
+      case 'meal_rescheduled':
+        return (
+          <View>
+            <Text style={styles.notificationText}>
+              The meal <Text style={styles.bold}>{notification.meal_name}</Text> has been rescheduled by <Text style={styles.bold}>{hostName}</Text>.
+            </Text>
+            <Text style={styles.notificationText}>
+              New Date: <Text style={styles.bold}>{notification.new_date}</Text>
+            </Text>
+            <Text style={styles.notificationText}>
+              Message from host: {notification.message}
+            </Text>
+            <Text style={styles.notificationDate}>
+              {new Date(notification.created_at).toLocaleString()}
+            </Text>
+            <Button
+              title="Accept New Date"
+              onPress={() => handleAcceptNewDate(notification)}
+              buttonStyle={styles.acceptButton}
+            />
+            <Button
+              title="Opt-out"
+              onPress={() => handleOptOut(notification)}
+              buttonStyle={styles.denyButton}
+            />
+          </View>
+        )
+      case 'meal_change':
+        return (
+          <View>
+            <Text style={styles.notificationText}>
+              The meal <Text style={styles.bold}>{notification.meal_name}</Text> has a new date or time.
+            </Text>
+            <Text style={styles.notificationText}>
+              New Date: <Text style={styles.bold}>{notification.new_date}</Text>
+            </Text>
+            <Text style={styles.notificationText}>
+              New Time: <Text style={styles.bold}>{notification.new_time}</Text>
+            </Text>
+            <Text style={styles.notificationText}>
+              Host's Comment: {notification.meal_change_comment}
+            </Text>
+            <Text style={styles.notificationDate}>
+              {new Date(notification.created_at).toLocaleString()}
+            </Text>
+            <View style={styles.actionButtons}>
+              <Button
+                title="Accept Changes"
+                onPress={() => handleAcceptChange(notification)}
+                buttonStyle={[styles.acceptButton, styles.equalButton]}
+              />
+              <Button
+                title="Opt-out"
+                onPress={() => handleOptOutChange(notification)}
+                buttonStyle={[styles.denyButton, styles.equalButton]}
+              />
+            </View>
           </View>
         )
       default:
@@ -321,5 +404,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginTop: 10,
     marginLeft: 10,
+  },
+  equalButton: {
+    flex: 1,
+    marginHorizontal: 5,
   },
 }) 
