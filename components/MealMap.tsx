@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { Session } from '@supabase/supabase-js'
 import BottomSheet, { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import moment from 'moment-timezone'
 
 interface Region {
   latitude: number;
@@ -620,6 +621,10 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     return count < meal.max_guests && !alreadyJoined && mealDate >= now;
   });
 
+  const displayDate = (dateString: string) => {
+    return moment.tz(dateString, 'America/New_York').format('dddd, MMMM Do YYYY, h:mm A');
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1, width: '100%', height: '100%' }}>
@@ -663,7 +668,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                       />
                     </View>
                     <Text style={styles.calloutTime}>
-                      {new Date(meal.meal_date).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour12: true, hour: '2-digit', minute: '2-digit' })}
+                      {displayDate(meal.meal_date)}
                     </Text>
                     <Text style={styles.calloutGuests}>
                       Guests: {meal.joined_guests && meal.joined_guests.length > 0 ? meal.joined_guests.length : 0} / {meal.max_guests}
@@ -719,14 +724,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                     )}
                     <Text style={styles.mealTitle}>{meal.name}</Text>
                     <Text style={styles.mealInfo}>
-                      {new Date(meal.meal_date).toLocaleString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour12: true,
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {displayDate(meal.meal_date)}
                     </Text>
                     <Text style={styles.mealPrice}>${meal.price}</Text>
                     <Text style={styles.mealInfo}>
@@ -781,14 +779,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                   <View style={styles.modalInfoContainer}>
                     <Text style={styles.modalInfoLabel}>Date & Time:</Text>
                     <Text style={styles.modalInfo}>
-                      {new Date(selectedMeal.meal_date).toLocaleString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric',
-                        hour12: true,
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {displayDate(selectedMeal.meal_date)}
                     </Text>
                   </View>
                   
