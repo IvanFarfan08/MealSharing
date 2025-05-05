@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import LottieView from 'lottie-react-native'
 
 export default function Account({ session }: { session: Session }) {
+  const [full_name, setfull_name] = useState('')
   const [username, setUsername] = useState('')
   const [rating, setRating] = useState<number | null>(null)
   const [reviews, setReviews] = useState<any[]>([])
@@ -18,7 +19,7 @@ export default function Account({ session }: { session: Session }) {
   async function getProfile() {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`username, rating, reviews`)
+      .select(`username, rating, reviews,full_name`)
       .eq('id', session.user.id)
       .single()
 
@@ -28,6 +29,7 @@ export default function Account({ session }: { session: Session }) {
     }
 
     if (data) {
+      setfull_name(data.full_name)
       setUsername(data.username)
       setRating(data.rating)
       setReviews(Array.isArray(data.reviews) ? data.reviews : [])
@@ -55,8 +57,8 @@ export default function Account({ session }: { session: Session }) {
       <Text h3 style={styles.heading}>Account</Text>
 
       <View style={styles.infoSection}>
-        <Text style={styles.label}>Username:</Text>
-        <Text style={styles.value}>{username}</Text>
+        <Text style={styles.label}>Name:</Text>
+        <Text style={styles.value}>{full_name}</Text>
 
         <Text style={styles.label}>Email:</Text>
         <Text style={styles.value}>{session.user.email}</Text>

@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase'
 import { Session } from '@supabase/supabase-js'
 import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
+import moment from 'moment-timezone'
 
 export default function MyMeals({ session }: { session: Session }) {
   const [hostedMeals, setHostedMeals] = useState<any[]>([])
@@ -31,6 +32,9 @@ export default function MyMeals({ session }: { session: Session }) {
   const [guestInfo, setGuestInfo] = useState<any>({})
   const [requestedMeals, setRequestedMeals] = useState<any[]>([])
   const [requesterInfo, setRequesterInfo] = useState<any>({})
+  const [newDate, setNewDate] = useState(selectedMeal?.meal_date || '')
+  const [newTime, setNewTime] = useState(selectedMeal?.meal_time || '')
+  const [rescheduleComment, setRescheduleComment] = useState('')
 
   const fetchMyMeals = async () => {
     const userId = session.user.id
@@ -183,8 +187,61 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   }
 
+  const updateMealAndNotifyGuests = async (mealId: string, newDate: string, newTime: string, hostComment: string, mealName: string) => {
+    try {
+      // Update the meal's date and time in the database
+      const { error: updateError } = await supabase
+        .from('meals')
+        .update({ meal_date: newDate, meal_time: newTime })
+        .eq('id', mealId);
+
+      if (updateError) {
+        throw new Error(`Error updating meal: ${updateError.message}`);
+      }
+
+      // Fetch the guests who have joined the meal
+      const { data: mealData, error: fetchError } = await supabase
+        .from('meals')
+        .select('joined_guests')
+        .eq('id', mealId)
+        .single();
+
+      if (fetchError || !mealData) {
+        throw new Error(`Error fetching meal data: ${fetchError?.message || 'No data found'}`);
+      }
+
+      // Create notifications for each guest
+      const notifications = mealData.joined_guests.map((guestId: string) => ({
+        user_id: guestId,
+        type: 'meal_change',
+        meal_id: mealId,
+        meal_name: mealName,
+        new_date: newDate,
+        new_time: newTime,
+        meal_change_comment: hostComment,
+        created_at: new Date().toISOString(),
+      }));
+
+      // Insert notifications into the database
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert(notifications);
+
+      if (insertError) {
+        throw new Error(`Error creating notifications: ${insertError.message}`);
+      }
+
+      console.log('Notifications created successfully');
+    } catch (error: any) {
+      console.error('Error in updateMealAndNotifyGuests:', error.message);
+    }
+  };
+
   const handleEditSave = async () => {
     if (!selectedMeal) return
+
+    // Use moment-timezone to set the date to local time
+    const localDate = moment.tz(newDate + ' ' + newTime, 'YYYY-MM-DD HH:mm', 'America/New_York').toDate();
 
     const { error } = await supabase
       .from('meals')
@@ -194,12 +251,24 @@ export default function MyMeals({ session }: { session: Session }) {
         price: parseFloat(selectedMeal.price) || 0,
         max_guests: parseInt(selectedMeal.max_guests) || 1,
         image_url: selectedMeal.image_url,
+        meal_date: localDate.toISOString(),
+        meal_time: newTime,
       })
       .eq('id', selectedMeal.id)
 
     if (error) {
       Alert.alert('Error updating meal', error.message)
     } else {
+      // Notify guests about the reschedule
+      const { data: guests } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('id', selectedMeal.joined_guests || [])
+
+      if (guests) {
+        await updateMealAndNotifyGuests(selectedMeal.id, newDate, newTime, rescheduleComment, selectedMeal.name);
+      }
+
       Alert.alert('Meal Updated', 'Your changes have been saved.')
       setModalVisible(false)
       fetchMyMeals()
@@ -423,6 +492,61 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   }
 
+  const handleEditMeal = (meal: any) => {
+    setSelectedMeal(meal); // Keep the image
+    setNewDate(meal.meal_date.split('T')[0]); // Set date without time
+    setNewTime(meal.meal_time || ''); // Set time
+    setRescheduleComment(''); // Clear comment
+    setModalVisible(true);
+  };
+
+  const handleCancelJoinRequest = async (mealId: string) => {
+    try {
+      const userId = session.user.id;
+
+      // Fetch the current meal data
+      const { data: mealData, error: fetchError } = await supabase
+        .from('meals')
+        .select('requested_guests')
+        .eq('id', mealId)
+        .single();
+
+      if (fetchError || !mealData) {
+        throw new Error(`Error fetching meal data: ${fetchError?.message || 'No data found'}`);
+      }
+
+      // Remove the user from the requested_guests list
+      const updatedRequestedGuests = mealData.requested_guests.filter((id: string) => id !== userId);
+
+      // Update the meal with the new requested_guests list
+      const { error: updateError } = await supabase
+        .from('meals')
+        .update({ requested_guests: updatedRequestedGuests })
+        .eq('id', mealId);
+
+      if (updateError) {
+        throw new Error(`Error updating meal: ${updateError.message}`);
+      }
+
+      // Delete the join request notification
+      const { error: deleteError } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('meal_id', mealId)
+        .eq('guest_id', userId)
+        .eq('type', 'join_request');
+
+      if (deleteError) {
+        throw new Error(`Error deleting notification: ${deleteError.message}`);
+      }
+
+      Alert.alert('Request Cancelled', 'Your join request has been cancelled.');
+      fetchMyMeals(); // Refresh the meals list
+    } catch (error: any) {
+      console.error('Error in handleCancelJoinRequest:', error.message);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={{ marginTop: 30 }}>
@@ -435,18 +559,14 @@ export default function MyMeals({ session }: { session: Session }) {
           <View key={meal.id}>
             <Card containerStyle={styles.card}>
               <TouchableOpacity
-                onPress={() => {
-                  setSelectedMeal({ ...meal })
-                  setModalVisible(true)
-                }}
+                onPress={() => handleEditMeal(meal)}
               >
                 {meal.image_url && (
                   <Image source={{ uri: meal.image_url }} style={styles.image} />
                 )}
                 <Text h4>{meal.name}</Text>
                 <Text>{`Price: $${meal.price}`}</Text>
-                <Text>{`Guests Joined: ${meal.joined_guests?.length || 0
-                  }/${meal.max_guests}`}</Text>
+                <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
                 <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
               </TouchableOpacity>
 
@@ -571,6 +691,11 @@ export default function MyMeals({ session }: { session: Session }) {
             <Text>{`Location: ${meal.location}`}</Text>
             <Text>{`Price: $${meal.price}`}</Text>
             <Text>{`Requested - Waiting on Host Approval`}</Text>
+            <Button
+              title="Cancel Request"
+              onPress={() => handleCancelJoinRequest(meal.id)}
+              buttonStyle={styles.cancelButton}
+            />
           </Card>
         ))
       )}
@@ -638,9 +763,27 @@ export default function MyMeals({ session }: { session: Session }) {
         <ScrollView style={styles.modalContainer}>
           <Text h3>Edit Meal</Text>
           <TextInput placeholder="Meal Name" value={selectedMeal?.name} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, name: text })} style={styles.input} />
-          <TextInput placeholder="Location" value={selectedMeal?.location} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, location: text })} style={styles.input} />
           <TextInput placeholder="Price" keyboardType="decimal-pad" value={selectedMeal?.price?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, price: text })} style={styles.input} />
           <TextInput placeholder="Max Guests" keyboardType="numeric" value={selectedMeal?.max_guests?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, max_guests: text })} style={styles.input} />
+          <TextInput
+            placeholder="New Date (YYYY-MM-DD)"
+            value={newDate}
+            onChangeText={setNewDate}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="New Time (HH:MM)"
+            value={newTime}
+            onChangeText={setNewTime}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Reschedule Comment"
+            value={rescheduleComment}
+            onChangeText={setRescheduleComment}
+            style={styles.input}
+            multiline
+          />
           <Button title="Pick Image" onPress={pickImage} buttonStyle={styles.imageButton} />
           {selectedMeal?.image_url && <Image source={{ uri: selectedMeal.image_url }} style={styles.image} />}
           <Button title="Save Changes" onPress={handleEditSave} buttonStyle={styles.saveButton} />
@@ -802,6 +945,11 @@ const styles = StyleSheet.create({
   requestButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#ff4d4d',
+    borderRadius: 30,
     marginTop: 10,
   },
 })
