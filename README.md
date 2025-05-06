@@ -50,7 +50,7 @@ A React Native mobile application that connects people through shared meals. Use
   Implemented host meal cancellations and the notification center for meal status updates.
 
 - **Cory Vitanza**  
-  --update
+  Focused on documentation. Performed bug testing/fixing.
 
 ## Features and Functions
 
