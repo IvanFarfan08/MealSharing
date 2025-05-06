@@ -38,6 +38,20 @@ export default function MyMeals({ session }: { session: Session }) {
   const [rescheduleComment, setRescheduleComment] = useState('')
   const [cuisine, setCuisine] = useState('')
 
+  // Define categories for guests and hosts
+  const guestCategories = ['Punctuality', 'Cleanliness', 'Communication'];
+  const hostCategories = ['Hospitality', 'Meal Quality', 'Organization'];
+
+  // Add state for category ratings
+  const [categoryRatings, setCategoryRatings] = useState<{[key: string]: number}>({
+    Punctuality: 0,
+    Cleanliness: 0,
+    Communication: 0,
+    Hospitality: 0,
+    MealQuality: 0,
+    Organization: 0,
+  });
+
   const fetchMyMeals = async () => {
     const userId = session.user.id
     const now = Date.now()
@@ -287,12 +301,17 @@ export default function MyMeals({ session }: { session: Session }) {
   const handleSubmitReview = async () => {
     if (!mealToReview || !currentRevieweeId) return
   
+    // Calculate average rating
+    const categories = session.user.id === mealToReview.host_id ? guestCategories : hostCategories;
+    const avgRating = categories.reduce((acc, category) => acc + categoryRatings[category], 0) / categories.length;
+
     const newReview = {
       meal_id: mealToReview.id,
       reviewer_id: session.user.id,
-      rating: reviewRating,
+      rating: avgRating,
       comment: reviewComment,
       timestamp: new Date().toISOString(),
+      category_ratings: categoryRatings,
     }
   
     const { data: profile, error } = await supabase
@@ -308,11 +327,6 @@ export default function MyMeals({ session }: { session: Session }) {
   
     const reviewsArray = Array.isArray(profile.reviews) ? profile.reviews : []
     const updatedReviews = [...reviewsArray, newReview]
-  
-    const avgRating =
-      Math.round(
-        (updatedReviews.reduce((acc, r) => acc + r.rating, 0) / updatedReviews.length) * 10
-      ) / 10
   
     const { error: updateError } = await supabase
       .from('profiles')
@@ -556,16 +570,58 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   };
 
+  // Add a function to handle meal cancellation
+  const handleCancelMeal = async (mealId: string) => {
+    try {
+      // Fetch the current meal data
+      const { data: mealData, error: fetchError } = await supabase
+        .from('meals')
+        .select('joined_guests')
+        .eq('id', mealId)
+        .single();
+
+      if (fetchError || !mealData) {
+        throw new Error(`Error fetching meal data: ${fetchError?.message || 'No data found'}`);
+      }
+
+      // Check if there are any joined guests
+      if (mealData.joined_guests && mealData.joined_guests.length > 0) {
+        Alert.alert('Cannot Cancel', 'This meal cannot be canceled because guests have already joined.');
+        return;
+      }
+
+      // Delete the meal if no guests have joined
+      const { error: deleteError } = await supabase
+        .from('meals')
+        .delete()
+        .eq('id', mealId);
+
+      if (deleteError) {
+        throw new Error(`Error deleting meal: ${deleteError.message}`);
+      }
+
+      Alert.alert('Meal Canceled', 'The meal has been successfully canceled.');
+      fetchMyMeals(); // Refresh the meals list
+    } catch (error: any) {
+      console.error('Error in handleCancelMeal:', error.message);
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={{ paddingBottom: 100 }}
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+    >
       <View style={{ marginTop: 30 }}>
         <Text h3 style={styles.sectionTitle}>Meals You're Hosting</Text>
       </View>
       {hostedMeals.length === 0 ? (
         <Text style={styles.emptyText}>You haven't hosted any meals yet.</Text>
       ) : (
-        hostedMeals.map((meal) => (
-          <View key={meal.id}>
+        hostedMeals.map((meal, index) => (
+          <View key={`${meal.id}-${index}`}>
             <Card containerStyle={styles.card}>
               <TouchableOpacity
                 onPress={() => handleEditMeal(meal)}
@@ -580,6 +636,19 @@ export default function MyMeals({ session }: { session: Session }) {
                 <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
               </TouchableOpacity>
 
+              {/* Cancel Meal Button */}
+              {meal.joined_guests?.length === 0 && (
+                <Button
+                  title="Cancel Meal"
+                  onPress={() => handleCancelMeal(meal.id)}
+                  buttonStyle={{
+                    backgroundColor: '#f44336',
+                    borderRadius: 20,
+                    marginTop: 10,
+                  }}
+                />
+              )}
+
               {/* Incoming Join Requests */}
               {(meal.requested_guests || []).length > 0 && (
                 <>
@@ -588,10 +657,10 @@ export default function MyMeals({ session }: { session: Session }) {
                   >
                     Incoming Join Requests:
                   </Text>
-                  {(meal.requested_guests || []).map((guestId: string) => {
+                  {(meal.requested_guests || []).map((guestId: string, guestIndex: number) => {
                     const requester = requesterInfo[guestId] || {}
                     return (
-                      <View key={guestId} style={styles.requesterCard}>
+                      <View key={`${guestId}-${guestIndex}`} style={styles.requesterCard}>
                         <Text style={styles.requesterName}>
                           {requester.full_name || requester.username || guestId}
                         </Text>
@@ -612,8 +681,8 @@ export default function MyMeals({ session }: { session: Session }) {
                         {requester.reviews && requester.reviews.length > 0 && (
                           <View style={styles.reviewsContainer}>
                             <Text style={styles.reviewsTitle}>Recent Reviews:</Text>
-                            {requester.reviews.slice(0, 2).map((review: any, index: number) => (
-                              <View key={index} style={styles.reviewItem}>
+                            {requester.reviews.slice(0, 2).map((review: any, reviewIndex: number) => (
+                              <View key={reviewIndex} style={styles.reviewItem}>
                                 <Text style={styles.reviewRating}>
                                   {review.rating.toFixed(1)}/5.0 - {new Date(review.timestamp).toLocaleDateString()}
                                 </Text>
@@ -633,8 +702,6 @@ export default function MyMeals({ session }: { session: Session }) {
                               backgroundColor: '#4CAF50',
                               borderRadius: 20,
                               marginTop: 10,
-                              flex: 1,
-                              marginRight: 5,
                             }}
                           />
                           <Button
@@ -644,8 +711,6 @@ export default function MyMeals({ session }: { session: Session }) {
                               backgroundColor: '#f44336',
                               borderRadius: 20,
                               marginTop: 10,
-                              flex: 1,
-                              marginLeft: 5,
                             }}
                           />
                         </View>
@@ -807,13 +872,29 @@ export default function MyMeals({ session }: { session: Session }) {
         <View style={styles.reviewModal}>
           <Card containerStyle={styles.reviewCard}>
             <Text h4 style={{ textAlign: 'center' }}>Leave a Review</Text>
-            <View style={styles.starRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                  <Text style={{ fontSize: 30, color: reviewRating >= star ? '#FFD700' : '#ccc' }}>★</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {session.user.id === mealToReview?.host_id ? guestCategories.map(category => (
+              <View key={category} style={styles.categoryRow}>
+                <Text style={styles.categoryLabel}>{category}</Text>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setCategoryRatings(prev => ({ ...prev, [category]: star }))}>
+                      <Text style={{ fontSize: 30, color: categoryRatings[category] >= star ? '#FFD700' : '#ccc' }}>★</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )) : hostCategories.map(category => (
+              <View key={category} style={styles.categoryRow}>
+                <Text style={styles.categoryLabel}>{category}</Text>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setCategoryRatings(prev => ({ ...prev, [category]: star }))}>
+                      <Text style={{ fontSize: 30, color: categoryRatings[category] >= star ? '#FFD700' : '#ccc' }}>★</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
             <TextInput
               placeholder="Write a comment (optional)"
               value={reviewComment}
@@ -836,7 +917,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF3E0',
     padding: 16,
-    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 22,
@@ -963,6 +1043,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff4d4d',
     borderRadius: 30,
     marginTop: 10,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  categoryLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 10,
   },
 })
 

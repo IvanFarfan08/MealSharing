@@ -38,18 +38,46 @@ A React Native mobile application that connects people through shared meals. Use
 - **Cory Vitanza**  
   Focused on documentation. Performed bug testing/fixing.
 
-## Features
+### Milestone 5
+
+- **Ryan Davis**  
+  Focused on documentation. Implemented merge requests and bug fixes.
+
+- **Ivan Farfan**  
+  Manages SupaBase DB. Implemented AI categorizations functionality.
+
+- **Johan Jaramillo**  
+  Implemented host meal cancellations and the notification center for meal status updates.
+
+- **Cory Vitanza**  
+  Focused on documentation. Performed bug testing/fixing.
+
+## Features and Functions
 
 - **User Authentication**: User registration and login.
 - **Meal Discovery**: Users can find meals hosted by others in their nearby area.
   - **Meal Requesting**: Users can request to join meals created by hosts.
 - **Meal Hosting**: Users can host meals for others to join.
   - **Meal Accepting / Declining**: Hosts can accept / deny users from their meal.
+  - **Cancel or Reschedule Meals**: Hosts can cancel or reschedule meals.
+  - **Manage Guests**: Hosts can view and manage guests for each meal.
 - **Host / Guest Rating**: Users can rate their experience of the meal on a per-user basis.
+- **Guest Features**:
+  - **Cancel Join Request**: Guests can cancel a join request if it has not yet been accepted.
+  - **View Meal History**: Guests can view request history and upcoming meals.
+  - **In-App Notifications**: Guests receive updates for request outcomes.
+- **System Features**:
+  - **Notification Center**: Centralized updates for meal status and user actions.
+  - **Edge Case Handling**: System manages cases like full meals and rejoining canceled ones.
+
 
 ## Features (Project) Board
 
 Interested individuals can view the project board on [GitHub Projects](https://github.com/users/IvanFarfan08/projects/5) where we specify our functions to be implemented.
+
+## Functions not Implemented
+
+The app currently has no implementation of the Stripe API, as it was not necessary at any stage in development so far to implement a payment system. Also, while mock services are implemented, the app does not support an email notification system for users. Instead, the app contains its own notification system for users to view and manage their requests and updates.
 
 ## Prerequisites
 

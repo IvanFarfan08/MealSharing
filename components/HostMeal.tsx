@@ -175,7 +175,7 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
 
     // Get cuisine directly from the function return value
     const detectedCuisine = await identifyCuisine(name)
-    
+
     const { error } = await supabase.from('meals').insert([{
       name,
       location: location,
@@ -210,7 +210,7 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
   return (
     <ScrollView 
       style={styles.container} 
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { marginTop: 40 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
     >
@@ -382,6 +382,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#ffb31a',
+    fontWeight: 'bold',
   },
   subheading: {
     marginTop: 20,
