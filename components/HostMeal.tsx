@@ -175,7 +175,7 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
   return (
     <ScrollView 
       style={styles.container} 
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { marginTop: 40 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
     >
@@ -347,6 +347,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#ffb31a',
+    fontWeight: 'bold',
   },
   subheading: {
     marginTop: 20,

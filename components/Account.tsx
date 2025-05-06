@@ -11,6 +11,7 @@ export default function Account({ session }: { session: Session }) {
   const [username, setUsername] = useState('')
   const [rating, setRating] = useState<number | null>(null)
   const [reviews, setReviews] = useState<any[]>([])
+  const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (session?.user) getProfile()
@@ -19,7 +20,7 @@ export default function Account({ session }: { session: Session }) {
   async function getProfile() {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`username, rating, reviews,full_name`)
+      .select(`username, rating, reviews, full_name`)
       .eq('id', session.user.id)
       .single()
 
@@ -33,6 +34,27 @@ export default function Account({ session }: { session: Session }) {
       setUsername(data.username)
       setRating(data.rating)
       setReviews(Array.isArray(data.reviews) ? data.reviews : [])
+
+      // Calculate average category ratings
+      const categoryAverages: Record<string, number> = { Punctuality: 0, Cleanliness: 0, Communication: 0, Hospitality: 0, MealQuality: 0, Organization: 0 };
+      const categoryCounts: Record<string, number> = { Punctuality: 0, Cleanliness: 0, Communication: 0, Hospitality: 0, MealQuality: 0, Organization: 0 };
+
+      data.reviews.forEach((review: any) => {
+        if (review.category_ratings) {
+          Object.keys(review.category_ratings).forEach(category => {
+            categoryAverages[category] += review.category_ratings[category];
+            categoryCounts[category] += 1;
+          });
+        }
+      });
+
+      Object.keys(categoryAverages).forEach(category => {
+        if (categoryCounts[category] > 0) {
+          categoryAverages[category] /= categoryCounts[category];
+        }
+      });
+
+      setCategoryRatings(categoryAverages);
     }
   }
 
@@ -47,10 +69,19 @@ export default function Account({ session }: { session: Session }) {
     </Text>
   )
 
+  const renderCategoryRatings = (categories: string[], ratings: any) => (
+    categories.map(category => (
+      <View key={category} style={styles.categoryRatingRow}>
+        <Text style={styles.categoryLabel}>{category}:</Text>
+        <Text style={styles.categoryValue}>{ratings[category]?.toFixed(1) || 'N/A'}</Text>
+      </View>
+    ))
+  )
+
   return (
     <ScrollView 
       style={styles.container} 
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 120, marginTop: 30 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
     >
@@ -70,6 +101,9 @@ export default function Account({ session }: { session: Session }) {
           <>
             <Text style={styles.label}>Average Rating:</Text>
             <Text style={styles.value}>{rating.toFixed(1)} / 5.0</Text>
+            <Text style={styles.label}>Category Ratings:</Text>
+            {renderCategoryRatings(['Punctuality', 'Cleanliness', 'Communication'], categoryRatings)}
+            {renderCategoryRatings(['Hospitality', 'MealQuality', 'Organization'], categoryRatings)}
           </>
         )}
       </View>
@@ -113,14 +147,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
   },
   content: {
-    flex: 1,
     padding: 24,
     paddingBottom: 80,
   },
   heading: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#333',
+    color: '#ffb31a',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -183,5 +216,20 @@ const styles = StyleSheet.create({
   lottie: {
     width: '100%',
     height: '100%',
+  },
+  categoryRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginRight: 8,
+  },
+  categoryValue: {
+    fontSize: 16,
+    color: '#333',
   },
 })

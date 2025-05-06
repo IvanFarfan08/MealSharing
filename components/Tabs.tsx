@@ -105,8 +105,8 @@ export default function MainTabs({ session }: { session: Session }) {
         headerShown: false,
         tabBarActiveTintColor: '#ffb31a',
         tabBarStyle: { 
-          height: 60, 
-          paddingBottom: 8,
+          height: 70,
+          paddingBottom: 10,
           paddingTop: 5,
           position: 'absolute',
           bottom: 0,
