@@ -29,6 +29,7 @@ interface Meal {
   id: string;
   name: string;
   price: number;
+  cuisine: string;
   location: {
     latitude: number;
     longitude: number;
@@ -84,6 +85,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
     const safeMeal = {
       id: meal.id || '',
       name: meal.name || 'Unnamed Meal',
+      cuisine: meal.cuisine || 'Unknown Cuisine',
       location: typeof meal.location === 'string' ? meal.location : 
                 (meal.location_address || 'Location not specified'),
       location_coords: typeof meal.location === 'object' ? meal.location : 
@@ -374,6 +376,17 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
       fontWeight: 'bold',
       marginBottom: 5
     },
+    calloutCuisine: {
+      fontSize: 10,
+      color: "#ffffff",
+      marginBottom: 3,
+      backgroundColor: '#ffb31a',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 5,
+      overflow: 'hidden',
+      alignSelf: 'flex-start'
+    },
     calloutPrice: {
       fontSize: 16,
       color: '#ffb31a',
@@ -500,6 +513,17 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
       fontSize: 18,
       fontWeight: 'bold',
       marginBottom: 5,
+    },
+    mealCuisine: {
+      fontSize: 14,
+      color: '#ffffff',
+      backgroundColor: '#ffb31a',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 5,
+      overflow: 'hidden',
+      alignSelf: 'flex-start',
+      marginBottom: 3,
     },
     mealInfo: {
       fontSize: 14,
@@ -660,6 +684,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                 <Callout tooltip style={styles.callout}>
                   <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{meal.name}</Text>
+                    <Text style={styles.calloutCuisine}>{meal.cuisine}</Text>
                     <Text style={styles.calloutPrice}>${meal.price}</Text>
                     <View style={styles.calloutImageContainer}>
                       <Image
@@ -723,6 +748,7 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                       <Image source={{ uri: meal.image_url }} style={styles.mealImage} />
                     )}
                     <Text style={styles.mealTitle}>{meal.name}</Text>
+                    <Text style={styles.mealCuisine}>{meal.cuisine}</Text>
                     <Text style={styles.mealInfo}>
                       {displayDate(meal.meal_date)}
                     </Text>
@@ -774,6 +800,11 @@ export default function MealMap({ userLocation, session }: MealMapProps) {
                   <View style={styles.modalInfoContainer}>
                     <Text style={styles.modalInfoLabel}>Location:</Text>
                     <Text style={styles.modalInfo}>{selectedMeal.location}</Text>
+                  </View>
+
+                  <View style={styles.modalInfoContainer}>
+                    <Text style={styles.modalInfoLabel}>Cuisine:</Text>
+                    <Text style={styles.modalInfo}>{selectedMeal.cuisine}</Text>
                   </View>
                   
                   <View style={styles.modalInfoContainer}>

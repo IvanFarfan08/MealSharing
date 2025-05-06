@@ -7,6 +7,8 @@ import { Session } from '@supabase/supabase-js'
 import * as ImagePicker from 'expo-image-picker'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import LottieView from 'lottie-react-native'
+import OpenAI from "openai";
+import { OPENAI_API_KEY } from '@env';
 
 interface HostMealProps {
   session: Session;
@@ -33,6 +35,35 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
 
   const [courses, setCourses] = useState([{ name: '', ingredients: '' }])
   const [image, setImage] = useState<string | null>(null)
+  const [cuisine, setCuisine] = useState<string | null>(null)
+
+  const identifyCuisine = async (MealName: string): Promise<string> => {
+      try {
+        const openai = new OpenAI({
+          apiKey: OPENAI_API_KEY,
+        });
+        
+        console.log("name: " + MealName)
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: 'user',
+            content: 'Assign a cuisine to this meal: ' + MealName + '. Response should be a single word. Choose from American, Italian, Mexican, Latin American, Chinese, Indian, Middle Eastern, Mediterranean, Asian and European'
+          }]
+        })
+        const content = response.choices[0].message.content
+        if (content) {
+          setCuisine(content) // Still update state for UI purposes
+          return content
+        } else {
+          setCuisine('Unknown')
+          return 'Unknown'
+        }
+      } catch (error) {
+        console.error('Error identifying cuisine:', error)
+        return 'Unknown'
+      }
+    }
 
   const handleImageUpload = async (uri: string) => {
     try {
@@ -142,6 +173,9 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
     const courseNames = courses.map(c => c.name)
     const allIngredients = courses.map(c => `${c.name}: ${c.ingredients}`)
 
+    // Get cuisine directly from the function return value
+    const detectedCuisine = await identifyCuisine(name)
+    
     const { error } = await supabase.from('meals').insert([{
       name,
       location: location,
@@ -153,6 +187,7 @@ export default function HostMeal({ session, userLocation }: HostMealProps) {
       host_id: session.user.id,
       ingredients: allIngredients,
       courses: courseNames,
+      cuisine: detectedCuisine 
     }])
 
     if (error) {

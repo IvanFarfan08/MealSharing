@@ -15,6 +15,7 @@ import { Session } from '@supabase/supabase-js'
 import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import moment from 'moment-timezone'
+import axios from 'axios'
 
 export default function MyMeals({ session }: { session: Session }) {
   const [hostedMeals, setHostedMeals] = useState<any[]>([])
@@ -35,6 +36,7 @@ export default function MyMeals({ session }: { session: Session }) {
   const [newDate, setNewDate] = useState(selectedMeal?.meal_date || '')
   const [newTime, setNewTime] = useState(selectedMeal?.meal_time || '')
   const [rescheduleComment, setRescheduleComment] = useState('')
+  const [cuisine, setCuisine] = useState('')
 
   const fetchMyMeals = async () => {
     const userId = session.user.id
@@ -253,6 +255,7 @@ export default function MyMeals({ session }: { session: Session }) {
       .from('meals')
       .update({
         name: selectedMeal.name,
+        cuisine: selectedMeal.cuisine,
         location: selectedMeal.location,
         price: parseFloat(selectedMeal.price) || 0,
         max_guests: parseInt(selectedMeal.max_guests) || 1,
@@ -571,6 +574,7 @@ export default function MyMeals({ session }: { session: Session }) {
                   <Image source={{ uri: meal.image_url }} style={styles.image} />
                 )}
                 <Text h4>{meal.name}</Text>
+                <Text>{`Cuisine: ${meal.cuisine}`}</Text>
                 <Text>{`Price: $${meal.price}`}</Text>
                 <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
                 <Text style={{ color: '#888', marginTop: 5 }}>Tap to edit</Text>
@@ -664,6 +668,7 @@ export default function MyMeals({ session }: { session: Session }) {
           <Card key={meal.id} containerStyle={styles.card}>
             {meal.image_url && <Image source={{ uri: meal.image_url }} style={styles.image} />}
             <Text h4>{meal.name}</Text>
+            <Text>{`Cuisine: ${meal.cuisine}`}</Text>
             <Text>{`Price: $${meal.price}`}</Text>
             <Text>{`Guests Joined: ${meal.joined_guests?.length || 0}/${meal.max_guests}`}</Text>
             <Button
@@ -769,6 +774,7 @@ export default function MyMeals({ session }: { session: Session }) {
         <ScrollView style={styles.modalContainer}>
           <Text h3>Edit Meal</Text>
           <TextInput placeholder="Meal Name" value={selectedMeal?.name} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, name: text })} style={styles.input} />
+          <TextInput placeholder="Cuisine" value={selectedMeal?.cuisine} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, cuisine: text })} style={styles.input} />
           <TextInput placeholder="Price" keyboardType="decimal-pad" value={selectedMeal?.price?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, price: text })} style={styles.input} />
           <TextInput placeholder="Max Guests" keyboardType="numeric" value={selectedMeal?.max_guests?.toString() || ''} onChangeText={(text) => setSelectedMeal({ ...selectedMeal, max_guests: text })} style={styles.input} />
           <TextInput
