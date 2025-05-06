@@ -41,10 +41,10 @@ A React Native mobile application that connects people through shared meals. Use
 ### Milestone 5
 
 - **Ryan Davis**  
-  --update
+  Focused on documentation. Implemented merge requests and bug fixes.
 
 - **Ivan Farfan**  
-  --update
+  Manages SupaBase DB. Implemented AI categorizations functionality.
 
 - **Johan Jaramillo**  
   Implemented host meal cancellations and the notification center for meal status updates.
