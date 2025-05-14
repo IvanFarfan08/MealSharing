@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, View, ScrollView, Alert } from 'react-native'
+import { StyleSheet, View, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native'
 import { Text, Button } from '@rneui/themed'
 import { Session } from '@supabase/supabase-js'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import LottieView from 'lottie-react-native'
+import OpenAI from 'openai'
+import { OPENAI_API_KEY } from '@env'
 
 export default function Account({ session }: { session: Session }) {
   const [full_name, setfull_name] = useState('')
@@ -12,6 +14,9 @@ export default function Account({ session }: { session: Session }) {
   const [rating, setRating] = useState<number | null>(null)
   const [reviews, setReviews] = useState<any[]>([])
   const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({})
+  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
     if (session?.user) getProfile()
@@ -35,7 +40,6 @@ export default function Account({ session }: { session: Session }) {
       setRating(data.rating)
       setReviews(Array.isArray(data.reviews) ? data.reviews : [])
 
-      // Calculate average category ratings
       const categoryAverages: Record<string, number> = { Punctuality: 0, Cleanliness: 0, Communication: 0, Hospitality: 0, MealQuality: 0, Organization: 0 };
       const categoryCounts: Record<string, number> = { Punctuality: 0, Cleanliness: 0, Communication: 0, Hospitality: 0, MealQuality: 0, Organization: 0 };
 
@@ -62,6 +66,33 @@ export default function Account({ session }: { session: Session }) {
     const { error } = await supabase.auth.signOut()
     if (error) Alert.alert('Error signing out', error.message)
   }
+
+  const summarizeReviews = async () => {
+    setLoadingSummary(true);
+    setSummaryModalVisible(true);
+    try {
+      const openai = new OpenAI({ apiKey: OPENAI_API_KEY, dangerouslyAllowBrowser: true });
+
+      const comments = reviews.map(r => r.comment).filter(Boolean).join('\n');
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: 'You summarize user reviews into a concise paragraph.' },
+          { role: 'user', content: `Summarize the following reviews:\n${comments}` }
+        ],
+        temperature: 0.7,
+      });
+
+      const summary = response.choices[0]?.message?.content ?? 'No summary available.';
+      setSummaryText(summary);
+    } catch (error) {
+      setSummaryText('Failed to generate summary.');
+      console.error(error);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
 
   const renderStars = (count: number) => (
     <Text style={{ color: '#FFD700', fontSize: 18 }}>
@@ -120,6 +151,12 @@ export default function Account({ session }: { session: Session }) {
               </Text>
             </View>
           ))}
+
+          <Button
+            title="Summarize Reviews"
+            onPress={summarizeReviews}
+            buttonStyle={[styles.logoutButton, { backgroundColor: '#FFA500' }]}
+          />
         </View>
       )}
 
@@ -137,6 +174,31 @@ export default function Account({ session }: { session: Session }) {
           style={styles.lottie}
         />
       </View>
+
+      <Modal
+        visible={summaryModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSummaryModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10, width: '85%' }}>
+            {loadingSummary ? (
+              <ActivityIndicator size="large" color="#ffb31a" />
+            ) : (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 10 }}>Review Summary</Text>
+                <Text style={{ fontSize: 16, color: '#333' }}>{summaryText}</Text>
+                <Button
+                  title="Close"
+                  onPress={() => setSummaryModalVisible(false)}
+                  buttonStyle={[styles.logoutButton, { backgroundColor: '#ccc', marginTop: 10 }]}
+                />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
