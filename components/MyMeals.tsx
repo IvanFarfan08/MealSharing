@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native'
 import { Text, Card, Button } from '@rneui/themed'
 import { supabase } from '../lib/supabase'
@@ -16,6 +17,8 @@ import { useFocusEffect } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import moment from 'moment-timezone'
 import axios from 'axios'
+import OpenAI from 'openai'
+import { OPENAI_API_KEY } from '@env'
 
 export default function MyMeals({ session }: { session: Session }) {
   const [hostedMeals, setHostedMeals] = useState<any[]>([])
@@ -37,6 +40,8 @@ export default function MyMeals({ session }: { session: Session }) {
   const [newTime, setNewTime] = useState(selectedMeal?.meal_time || '')
   const [rescheduleComment, setRescheduleComment] = useState('')
   const [cuisine, setCuisine] = useState('')
+  const [guestSummaries, setGuestSummaries] = useState<{[key: string]: string}>({})
+  const [loadingSummaries, setLoadingSummaries] = useState<{[key: string]: boolean}>({})
 
   // Define categories for guests and hosts
   const guestCategories = ['Punctuality', 'Cleanliness', 'Communication'];
@@ -607,6 +612,60 @@ export default function MyMeals({ session }: { session: Session }) {
     }
   };
 
+  const getGuestSummary = async (guestId: string, reviews: any[]) => {
+    if (guestSummaries[guestId]) return; // Return if summary already exists
+    
+    setLoadingSummaries(prev => ({ ...prev, [guestId]: true }));
+    
+    try {
+      const openai = new OpenAI({ apiKey: OPENAI_API_KEY, dangerouslyAllowBrowser: true });
+      
+      // Filter reviews where the person was a guest
+      const guestReviews = reviews.filter(review => 
+        review.category_ratings && 
+        Object.keys(review.category_ratings).includes('Punctuality')
+      );
+      
+      if (guestReviews.length === 0) {
+        setGuestSummaries(prev => ({ ...prev, [guestId]: 'No guest reviews available.' }));
+        return;
+      }
+
+      const comments = guestReviews.map(r => r.comment).filter(Boolean).join('\n');
+      
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You summarize guest reviews into a concise paragraph focusing on their behavior as a guest. Highlight key traits like punctuality, cleanliness, and communication.' 
+          },
+          { 
+            role: 'user', 
+            content: `Summarize the following guest reviews into a short paragraph:\n${comments}` 
+          }
+        ],
+        temperature: 0.7,
+      });
+
+      const summary = response.choices[0]?.message?.content ?? 'No summary available.';
+      setGuestSummaries(prev => ({ ...prev, [guestId]: summary }));
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      setGuestSummaries(prev => ({ ...prev, [guestId]: 'Failed to generate summary.' }));
+    } finally {
+      setLoadingSummaries(prev => ({ ...prev, [guestId]: false }));
+    }
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return '#4CAF50'; // Excellent - Green
+    if (rating >= 4.0) return '#8BC34A'; // Very Good - Light Green
+    if (rating >= 3.5) return '#FFC107'; // Good - Yellow
+    if (rating >= 3.0) return '#FF9800'; // Average - Orange
+    return '#F44336'; // Below Average - Red
+  };
+
   return (
     <ScrollView 
       style={styles.container} 
@@ -667,7 +726,9 @@ export default function MyMeals({ session }: { session: Session }) {
                         
                         {requester.rating !== undefined && (
                           <View style={styles.ratingContainer}>
-                            <Text style={styles.ratingText}>Rating: {requester.rating.toFixed(1)}/5.0</Text>
+                            <Text style={[styles.ratingText, { color: getRatingColor(requester.rating) }]}>
+                              Rating: {requester.rating.toFixed(1)}/5.0
+                            </Text>
                             <View style={styles.starsContainer}>
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <Text key={star} style={{ color: star <= requester.rating ? '#FFD700' : '#ccc' }}>
@@ -680,17 +741,18 @@ export default function MyMeals({ session }: { session: Session }) {
                         
                         {requester.reviews && requester.reviews.length > 0 && (
                           <View style={styles.reviewsContainer}>
-                            <Text style={styles.reviewsTitle}>Recent Reviews:</Text>
-                            {requester.reviews.slice(0, 2).map((review: any, reviewIndex: number) => (
-                              <View key={reviewIndex} style={styles.reviewItem}>
-                                <Text style={styles.reviewRating}>
-                                  {review.rating.toFixed(1)}/5.0 - {new Date(review.timestamp).toLocaleDateString()}
-                                </Text>
-                                {review.comment && (
-                                  <Text style={styles.reviewComment}>"{review.comment}"</Text>
-                                )}
-                              </View>
-                            ))}
+                            <Text style={styles.reviewsTitle}>Guest Summary:</Text>
+                            {loadingSummaries[guestId] ? (
+                              <ActivityIndicator size="small" color="#ffb31a" />
+                            ) : guestSummaries[guestId] ? (
+                              <Text style={styles.summaryText}>{guestSummaries[guestId]}</Text>
+                            ) : (
+                              <Button
+                                title="Generate Summary"
+                                onPress={() => getGuestSummary(guestId, requester.reviews)}
+                                buttonStyle={styles.summaryButton}
+                              />
+                            )}
                           </View>
                         )}
                         
@@ -1054,6 +1116,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginRight: 10,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#444',
+    fontStyle: 'italic',
+    marginTop: 8,
+    lineHeight: 20,
+    backgroundColor: '#f8f8f8',
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ffb31a',
+  },
+  summaryButton: {
+    backgroundColor: '#ffb31a',
+    borderRadius: 20,
+    marginTop: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
   },
 })
 
